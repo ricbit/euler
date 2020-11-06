@@ -1,5 +1,6 @@
-fib = [1, 2]
-while fib[-1] + fib[-2] < 4000000:
-  fib.append(fib[-1] + fib[-2])
+import euler
+import itertools
 
+fib = itertools.takewhile(lambda f: f < 4000000, euler.fibonacci())
 print(sum(i for i in fib if i % 2 == 0))
+

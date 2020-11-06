@@ -1,3 +1,5 @@
+import math
+
 given = """
 73167176531330624919225119674426574742355349194934
 96983520312774506326239578318016984801869478851843
@@ -22,15 +24,10 @@ given = """
 """
 
 n = "".join(given.split())
-
 d = 13
 
 def slice(n, start, d):
-  digits = [int(i) for i in n[start: start + d]]
-  ans = 1
-  for d in digits:
-    ans *= d
-  return ans
+  return math.prod(int(i) for i in n[start: start + d])
 
 allp = [slice(n, i, d) for i in range(0, len(n) - d)]
 print(max(allp))
