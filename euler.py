@@ -32,6 +32,25 @@ def primes():
     yield from check(i + 1)
     yield from check(i + 5)
   
+def factor(p):  
+  for i in range(2, math.isqrt(p) + 1):
+    coef = 0
+    while p % i == 0:
+      coef += 1
+      p //= i
+    if coef > 0:
+      yield (i, coef)
+  if p > 1:
+    yield (p, 1)
+    
+def number_of_divisors(p):
+  return math.prod(coef + 1 for p, coef in factor(p))
 
-
-
+def collatz_path(n):
+  yield n
+  while n != 1:
+    if n % 2 == 0:
+      n //= 2
+    else:
+      n = 3 * n + 1
+    yield n
