@@ -46,6 +46,9 @@ def factor(p):
 def number_of_divisors(p):
   return math.prod(coef + 1 for p, coef in factor(p))
 
+def sum_of_divisors(n):
+  return math.prod((p ** (coef + 1) - 1) / (p - 1) for p, coef in factor(n))
+
 def collatz_path(n):
   yield n
   while n != 1:
@@ -68,4 +71,5 @@ def sieve(n = 10 ** 8):
     if primes[i]:
       yield i
 
-
+def first(iterator):
+  return list(itertools.islice(iterator, 0, 1))[0]
