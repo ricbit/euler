@@ -54,3 +54,18 @@ def collatz_path(n):
     else:
       n = 3 * n + 1
     yield n
+
+def sieve(n = 10 ** 8):
+  primes = [True] * n
+  limit = math.isqrt(n) + 1
+  for i in range(2, limit):
+    if not primes[i]:
+      continue
+    yield i
+    for j in range(i * i, n, i):
+      primes[j] = False
+  for i in range(limit, n):
+    if primes[i]:
+      yield i
+
+
