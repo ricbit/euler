@@ -73,3 +73,7 @@ def sieve(n = 10 ** 8):
 
 def first(iterator):
   return list(itertools.islice(iterator, 0, 1))[0]
+
+def totient(n):
+  return math.prod(p ** (coef - 1) * (p - 1) for p, coef in factor(n))
+    

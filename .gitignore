@@ -1,4 +1,5 @@
 # Project Euler forbids to publish any source beyond problem 100
+p*f.py
 p[1-9]*.py
 p[1-9]*.m
 __pycache__/**
