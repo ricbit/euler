@@ -1,5 +1,6 @@
 import math
 import itertools
+import functools
 
 def fibonacci():
   a, b = 1, 1
@@ -76,4 +77,9 @@ def first(iterator):
 
 def totient(n):
   return math.prod(p ** (coef - 1) * (p - 1) for p, coef in factor(n))
-    
+   
+def take(it, n):
+  return list(itertools.islice(it, n))
+
+def chunked(it, n):
+  return iter(functools.partial(take, iter(it), n), [])
