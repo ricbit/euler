@@ -83,3 +83,7 @@ def take(it, n):
 
 def chunked(it, n):
   return iter(functools.partial(take, iter(it), n), [])
+
+def digits(n):
+  return math.ceil(math.log(1 + n, 10))
+
