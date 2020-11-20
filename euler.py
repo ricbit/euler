@@ -87,3 +87,10 @@ def chunked(it, n):
 def digits(n):
   return math.ceil(math.log(1 + n, 10))
 
+def sumdigits(n, e = 1):
+  ans = 0
+  while n > 0:
+    ans += (n % 10) ** e
+    n //= 10
+  return ans
+
