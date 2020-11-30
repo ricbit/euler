@@ -7,14 +7,10 @@ def squarecoefs(D):
   while True:
     i = c.to_integral(decimal.ROUND_FLOOR)
     yield int(i)
-    if c != i:
-      c = decimal.Decimal(1) / (c - i)
+    c = decimal.Decimal(1) / (c - i)
 
 def convergents(coefs):
-  h0 = 0
-  k0 = 1
-  h1 = 1
-  k1 = 0
+  h0, k0, h1, k1 = 0, 1, 1, 0
   for a in coefs:
     hn = a * h1 + h0
     kn = a * k1 + k0
@@ -31,7 +27,6 @@ def minimal():
   for i in range(2, 1001):
     if i not in squares:
       h, k = pell(i)
-      print(h, i)
       yield h, i
 
 decimal.getcontext().prec = 300
