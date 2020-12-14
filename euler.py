@@ -100,3 +100,28 @@ def sumdigits(n, e = 1):
     n //= 10
   return ans
 
+def custom_partitions(n, elements, sol=[], index=0, digits=0, limit=None):
+  if index >= len(elements):
+    return
+  for i in itertools.count(0):
+    k = i * elements[index]
+    if k > n:
+      return
+    if limit is not None and i + digits > limit:
+      return
+    if i == 0:
+      next_sol = sol
+    else:
+      next_sol = sol + [(i, elements[index])]
+    if k == n:
+      yield next_sol
+      return
+    yield from custom_partitions(
+        n - k, elements, next_sol, index + 1, digits + i, limit)
+
+def multinomial(quant):
+  ans = math.factorial(sum(quant))
+  ans //= math.prod(math.factorial(i) for i in quant)
+  return ans
+
+
