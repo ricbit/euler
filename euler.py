@@ -124,4 +124,31 @@ def multinomial(quant):
   ans //= math.prod(math.factorial(i) for i in quant)
   return ans
 
+def divisors(n, primes):
+  def factors(n):
+    for p in primes:
+      i = 0
+      while n % p == 0:
+        n //= p
+        i += 1
+      if i > 0:
+        yield (p, i)
+      if n == 1:
+        return
+      if p * p > n:
+        yield (n, 1)
+        return
+    yield (n, 1)
+        
+  def iterdiv(facs, n):
+    if n >= len(facs):
+      yield 1
+      return
+    x = 1
+    for i in range(1 + facs[n][1]):
+      for j in iterdiv(facs, n + 1):
+        yield x * j
+      x *= facs[n][0]
+  yield from iterdiv(list(factors(n)), 0)
+   
 
