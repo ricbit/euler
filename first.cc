@@ -2,6 +2,7 @@
 // g++-14 -std=c++23 -march=native -O3 -Wall first.cc -o first -ltbb -lgmpxx -lgmp
 
 #include <iostream>
+#include <chrono>
 #include <sstream>
 #include <execution>
 #include <utility>
@@ -15,6 +16,8 @@
 #include <numeric>
 #include <array>
 #include <gmpxx.h>
+
+#include "first_input.hh"
 
 class Solution {
   public:
@@ -76,7 +79,7 @@ std::generator<T> factor_integer(T n) {
   }
 }
 
-class P003 : public Solution{
+class P003 : public Solution {
   public:
    std::string solve() override {
      return std::to_string(std::ranges::max(factor_integer(600851475143LL)));
@@ -142,7 +145,7 @@ class P006 : public Solution {
     for (int i = 1; i <= 100; i++) {
       squares += i * i;
       acc += i;
-    };
+    }
     return std::to_string(acc * acc - squares);
   }
 };
@@ -277,7 +280,7 @@ std::vector<T> fill_vector(std::generator<T> gen) {
 }
 
 template<typename T>
-std::generator<T> numbers_generator(const std::string& grid) {
+std::generator<T> parse_numbers(const std::string& grid) {
   std::istringstream iss(grid);
   T value;
   while (iss >> value) {
@@ -288,7 +291,7 @@ std::generator<T> numbers_generator(const std::string& grid) {
 class P011 : public Solution {
   public:
   std::string solve() override {
-    std::vector<int> numbers = fill_vector(numbers_generator<int>(source_grid));
+    std::vector<int> numbers = fill_vector(parse_numbers<int>(source_grid));
     int best = 0;
     for (auto [dy, dx] : directions) {
       for (int y = 0; y < 20; y++) {
@@ -351,15 +354,14 @@ std::generator<int> triangular_generator() {
   }
 }
 
-int num_of_divisors(int n) {
-  int ans = 1;
+std::generator<std::pair<int, int>> group_factor_integer(int n) {
   int count = 0, last = 0;
   for (auto p : factor_integer(n)) {
     if (p != last) {
       if (last == 0) {
         count = 1;
       } else {
-        ans *= (count + 1);
+        co_yield {last, count};
         count = 1;
       }
       last = p;
@@ -367,7 +369,14 @@ int num_of_divisors(int n) {
       count++;
     }    
   }
-  ans *= (count + 1); // For the last prime factor
+  co_yield {last, count};
+}
+
+int num_of_divisors(int n) {
+  int ans = 1;
+  for (auto [p, exp] : group_factor_integer(n)) {
+    ans *= exp + 1;
+  }
   return ans;
 }
 
@@ -386,7 +395,7 @@ class P012 : public Solution {
 class P013 : public Solution {
   public:
   std::string solve() override {
-    auto numbers = fill_vector<mpz_class>(numbers_generator<mpz_class>(source_numbers));
+    auto numbers = fill_vector<mpz_class>(parse_numbers<mpz_class>(source_numbers));
     mpz_class sum = std::accumulate(numbers.begin(), numbers.end(), mpz_class(0));
     std::ostringstream oss;
     oss << sum;
@@ -512,25 +521,35 @@ std::generator<long long> collatz_generator(long long n) {
 class P014 : public Solution {
   public:
   std::string solve() override {
-    // Lots of optimizations still possible.
     int best_length = 0, best_index = 0;
-    std::vector<bool> collatz_lengths(1'000'000, false);
-    for (int i = 1; i < 1'000'000; i++) {
-      if (collatz_lengths[i]) {
+    const int size = 1'000'000;
+    std::vector<int> collatz_lengths(size, 0);
+    for (int i = 1; i < size; i++) {
+      if (collatz_lengths[i] > 0) {
         continue;
       }
-      int length = std::ranges::distance(collatz_generator(i));
+      int length = 0;
+      for (long long value : collatz_generator(i)) {
+        if (value < size) {
+          if (collatz_lengths[value] > 0) {
+            length += collatz_lengths[value];
+            break;
+          }
+        }
+        length++;
+      }
       if (length > best_length) {
         best_length = length;
         best_index = i;
       }
       for (long long value : collatz_generator(i)) {
-        if (value < 1'000'000) {
-          if (collatz_lengths[value]) {
+        if (value < size) {
+          if (collatz_lengths[value] > 0) {
             break;
           }
-          collatz_lengths[value] = true;
+          collatz_lengths[value] = length;
         }
+        length--;
       }
     }
     return std::to_string(best_index);
@@ -622,8 +641,207 @@ class P017 : public Solution {
   };
 };
 
+std::vector<std::vector<int>> parse_triangle(const std::string& source) {
+  std::vector<std::vector<int>> triangle;
+  for (size_t line = 0, i = 0; auto value : parse_numbers<int>(source)) {
+    if (line >= triangle.size()) {
+      triangle.emplace_back();
+    }
+    triangle[line].push_back(value);
+    i++;
+    if (i == line + 1) {
+      line++;
+      i = 0;
+    }
+  }
+  return triangle;
+}
+
+class P018 : public Solution {
+  public:
+  std::string solve() override {
+    auto grid = parse_triangle(triangle_source);
+    std::vector<std::vector<int>> ans(grid.size(), std::vector<int>(grid.size(), 0));
+    int n = grid.size();
+    for (int i = 0; i < n; i++) {
+      ans[n - 1][i] = grid[n - 1][i];
+    }
+    for (int j = n - 2; j >= 0; j--) {
+      for (int i = 0; i <= j; i++) {
+        ans[j][i] = grid[j][i] + std::max(ans[j + 1][i], ans[j + 1][i + 1]);
+      }
+    }
+    return std::to_string(ans[0][0]);
+  }
+  private:
+  std::string triangle_source = R"(
+75
+95 64
+17 47 82
+18 35 87 10
+20 04 82 47 65
+19 01 23 75 03 34
+88 02 77 73 07 63 67
+99 65 04 28 06 16 70 92
+41 41 26 56 83 40 80 70 33
+41 48 72 33 47 32 37 16 94 29
+53 71 44 65 25 43 91 52 97 51 14
+70 11 33 28 77 73 17 78 39 68 17 57
+91 71 52 38 17 14 91 43 58 50 27 29 48
+63 66 04 68 89 53 67 30 73 16 69 87 40 31
+04 62 98 27 23 09 70 98 73 93 38 53 60 04 23
+)";
+};
+
+class P019 : public Solution {
+  public:
+  std::string solve() override {
+    int count = 0;
+    for (int y = 1901; y <= 2000; ++y) {
+        for (unsigned m = 1; m <= 12; ++m) {
+            auto ymd = std::chrono::year{y} / std::chrono::month{m} / std::chrono::day{1};
+            auto sd = std::chrono::sys_days{ymd};
+            if (std::chrono::weekday{sd} == std::chrono::Sunday) {
+              count++;
+            }
+        }
+    }  
+    return std::to_string(count);  
+  }
+};
+
+class P020 : public Solution {
+  public:
+  std::string solve() override {
+    mpz_class factorial = 1;
+    for (int i = 1; i <= 100; i++) {
+      factorial *= i;
+    }
+    auto digits = fill_vector(digit_generator(factorial.get_str()));
+    int sum = std::accumulate(digits.begin(), digits.end(), 0);
+    return std::to_string(sum);
+  }
+};
+
+template<typename T>
+T ipow(T a, T b) {
+  T result = 1;
+  for (T i = 0; i < b; i++) {
+    result *= a;
+  }
+  return result;
+}
+
+int sum_of_divisors(int n) {
+  int ans = 1;
+  for (auto [p, exp] : group_factor_integer(n)) {
+    ans *= (ipow(p, exp + 1) -  1) / (p - 1);
+  }
+  return ans;
+}
+
+class P021 : public Solution {
+  public:
+  P021(const std::vector<int>& divisor_sums) : divisor_sums(divisor_sums) {
+  }
+  std::string solve() override {
+    int ans = 0;
+    for (int i = 1; i < 10'000; i++) {
+      int sum = divisor_sums[i] - i;
+      if (sum > i && sum < 10'000 && divisor_sums[sum] - sum == i) {
+        ans += i + sum;
+      }
+    }
+    return std::to_string(ans);
+  }
+  private:
+  const std::vector<int>& divisor_sums;
+};
+
+class P022 : public Solution {
+  public:
+  std::string solve() override {
+    auto names = p022_input;
+    std::sort(names.begin(), names.end());
+    long long ans = 0;
+    for (size_t i = 0; i < names.size(); i++) {
+      ans += (i + 1) * name_score(names[i]);
+    }
+    return std::to_string(ans);
+  }
+
+  private:
+  int name_score(const std::string& name) {
+    return std::accumulate(name.begin(), name.end(), 0, [](int acc, char c) {
+      return acc + (std::toupper(c) - 'A' + 1);
+    });
+  }
+};
+
+class P023 : public Solution {
+  public:
+  P023(const std::vector<int>& divisor_sums) : divisor_sums(divisor_sums) {
+  }
+  std::string solve() override {
+    const int limit = 28123;
+    std::vector<int> abundants;
+    for (int i = 1; i <= limit; i++) {
+      if (divisor_sums[i] - i > i) {
+        abundants.push_back(i);
+      }
+    }
+
+    std::vector<bool> non_abundant_sum(limit + 1, true);
+    for (size_t i = 0; i <= abundants.size(); i++) {
+      for (size_t j = i; j <= abundants.size(); j++) {
+        if (abundants[i] + abundants[j] > limit) {
+          break;
+        }
+        non_abundant_sum[abundants[i] + abundants[j]] = false;
+      }
+    }
+    int ans = 0;
+    for (size_t i = 0; i < non_abundant_sum.size(); i++) {
+      if (non_abundant_sum[i]) {
+        ans += i;
+      }
+    }
+    return std::to_string(ans);
+  }
+  private:
+  const std::vector<int>& divisor_sums;
+};
+
+class P024 : public Solution {
+  public:
+  std::string solve() override {
+    std::string digits = "0123456789";
+    std::sort(digits.begin(), digits.end());
+    for (int i = 0; i < 1'000'000 - 1; i++) {
+      std::next_permutation(digits.begin(), digits.end());
+    }
+    return digits;
+  }
+};
+
+class P025 : public Solution {
+  public:
+  std::string solve() override {
+    float phi = (1 + sqrt(5)) / 2;
+    return std::to_string(static_cast<int>(ceil((999 + log10(sqrt(5))) / log10(phi))));
+  }
+};
+
+std::generator<int> sum_of_divisors_generator(int limit) {
+  co_yield 0;
+  for (int i = 1; i <= limit; i++) {
+    co_yield sum_of_divisors(i);
+  }
+}
+
 int main() {
   std::vector<int> primes = fill_vector(sieve_generator(2'000'000));
+  std::vector<int> divisor_sums = fill_vector(sum_of_divisors_generator(28'123));
   std::vector<std::shared_ptr<Solution>> solutions = {
     std::make_shared<P001>(),
     std::make_shared<P002>(),
@@ -642,20 +860,32 @@ int main() {
     std::make_shared<P015>(),
     std::make_shared<P016>(),
     std::make_shared<P017>(),
+    std::make_shared<P018>(),
+    std::make_shared<P019>(),
+    std::make_shared<P020>(),
+    std::make_shared<P021>(divisor_sums),
+    std::make_shared<P022>(),
+    std::make_shared<P023>(divisor_sums),
+    std::make_shared<P024>(),
+    std::make_shared<P025>(),
   };
 
-  std::vector<std::string> results(solutions.size());
+  std::vector<std::pair<std::string, long long>> results(solutions.size());
   std::transform(
     std::execution::par,
     solutions.begin(), solutions.end(),
     results.begin(),
-    [](const auto& sol) {
-      return sol->solve();
+    [](const auto& solution) {
+      auto t0 = std::chrono::steady_clock::now();
+      std::string result = solution->solve();
+      auto t1 = std::chrono::steady_clock::now();
+      long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+      return make_pair(result, ms);
     }
   );
 
-  for (auto& r : results) {
-    std::cout << r << "\n";
+  for (int i = 1; auto& r : results) {
+    std::cout << i++ << "\t" << r.second << "ms\t" << r.first << "\n";
   }
   return 0;
 }
