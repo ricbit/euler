@@ -1,4 +1,5 @@
 import math
+import collections
 import itertools
 import functools
 
@@ -151,4 +152,17 @@ def divisors(n, primes):
       x *= facs[n][0]
   yield from iterdiv(list(factors(n)), 0)
    
+def all_factors(N):
+  factors = [collections.Counter() for _ in range(N + 1)]
+  prime = 2
+  for prime in range(2, N + 1):
+    if len(factors[prime]) != 0:
+      continue
+    pexp = prime
+    while pexp < N + 1:
+      for p in range(pexp, N + 1, pexp):
+        factors[p][prime] += 1
+      pexp *= prime
+    prime += 1
+  return factors
 
