@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <set>
 #include <sstream>
 #include <execution>
 #include <utility>
@@ -15,6 +16,7 @@
 #include <memory>
 #include <numeric>
 #include <array>
+#include <unordered_set>
 #include <gmpxx.h>
 
 #include "first_input.hh"
@@ -724,12 +726,16 @@ class P020 : public Solution {
 };
 
 template<typename T>
-T ipow(T a, T b) {
-  T result = 1;
-  for (T i = 0; i < b; i++) {
-    result *= a;
+T ipow(T base, T exp) {
+  T res = 1;
+  while (exp > 0) {
+    if (exp % 2 == 1) {
+      res *= base;
+    }
+    base *= base;
+    exp /= 2;
   }
-  return result;
+  return res;
 }
 
 int sum_of_divisors(int n) {
@@ -832,6 +838,133 @@ class P025 : public Solution {
   }
 };
 
+class P026 : public Solution {
+  public:
+  std::string solve() override {
+    std::vector<int> remainder(1000, -1);
+    int best_period = 0, best_index = 0;
+    for (int i = 2; i < 1000; i++) {
+      int rem = period(i, remainder);
+      if (rem > best_period) {
+        best_period = rem;
+        best_index = i;
+      }
+    }
+    return std::to_string(best_index);
+  }
+  private:
+  int period(int n, std::vector<int>& remainders) {
+    int pos = 0, a = 1;
+    fill(remainders.begin(), remainders.end(), -1);
+    remainders[1] = 0;
+    while (true) {
+      pos++;
+      if (a == 0) {
+        return 0;
+      }
+      int rem = a * 10 % n;
+      if (remainders[rem] >= 0) {
+        return pos - remainders[rem];
+      
+      }
+      remainders[rem] = pos;
+      a = rem;
+    }
+  }
+};
+
+class P027 : public Solution {
+  public:
+  P027(const std::vector<int>& primes) : primes(primes 
+    | std::ranges::views::filter([](int p) { return p < 1000; })
+    | std::ranges::to<std::unordered_set<int>>()) {
+  }
+  std::string solve() override {
+    int best_a = 0, best_b = 0, best_count = 0;
+    for (int a = -999; a <= 999; a++) {
+      for (int b : primes) {
+        int n = 0;
+        while (true) {
+          int value = n * n + a * n + b;
+          if (value < 0 || primes.find(value) == primes.end()) {
+            break;
+          }
+          n++;
+        }
+        if (n > best_count) {
+          best_count = n;
+          best_a = a;
+          best_b = b;
+        }
+      }
+    }
+    return std::to_string(best_a * best_b);
+  }
+
+  private:
+  const std::unordered_set<int> primes;
+};
+
+class P028 : public Solution {
+  public:
+  std::string solve() override {
+    int sum = 1, current = 1;;
+    for (int i = 2; i <= 1001; i += 2) {
+      for (int j = 0; j < 4; j++) {
+        current += i;
+        sum += current;
+      }
+    }
+    return std::to_string(sum);
+  }
+};
+
+template<typename T>
+T modpow(T base, T exp, T prime) {
+  T res = 1;
+  while (exp > 0) {
+    if (exp % 2 == 1) {
+      res = res * base % prime;
+    }
+    base = base * base % prime;
+    exp /= 2;
+  }
+  return res;
+}
+
+class P029 : public Solution {
+  public:
+  std::string solve() override {
+    std::set<mpz_class> unique_terms;
+    for (mpz_class a = 2; a <= 100; a++) {
+      mpz_class value = a;
+      for (long long b = 2; b <= 100; b++) {
+        value *= a;
+        unique_terms.insert(value);
+      }
+    }
+    return std::to_string(unique_terms.size());
+  }
+};
+
+class P030 : public Solution {
+  public:
+  std::string solve() override {
+    int sum = 0;
+    for (int i = 10; i < 1'000'000; i++) {
+      int digit_sum = 0, value = i;
+      while (value > 0) {
+        digit_sum += ipow(value % 10, 5);
+        value /= 10;
+      }
+      if (digit_sum == i) {
+        sum += i;
+      }
+    }
+    return std::to_string(sum);
+  }
+};
+
 std::generator<int> sum_of_divisors_generator(int limit) {
   co_yield 0;
   for (int i = 1; i <= limit; i++) {
@@ -868,6 +1001,11 @@ int main() {
     std::make_shared<P023>(divisor_sums),
     std::make_shared<P024>(),
     std::make_shared<P025>(),
+    std::make_shared<P026>(),
+    std::make_shared<P027>(primes),
+    std::make_shared<P028>(),
+    std::make_shared<P029>(),
+    std::make_shared<P030>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());
