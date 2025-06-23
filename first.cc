@@ -965,6 +965,124 @@ class P030 : public Solution {
   }
 };
 
+class P031 : public Solution {
+  public:
+  std::string solve() override {
+    return std::to_string(count(200, 0));
+  }
+  private:
+  int count(int n, size_t index) {
+    if (n == 0) {
+      return 1;
+    }
+    if (index >= coins.size()) {
+      return 0;
+    }
+    int ans = 0;
+    for (int i = 0; i <= n; i += coins[index]) {
+      ans += count(n - i, index + 1);
+    }
+    return ans;  
+  }
+  const std::vector<int> coins = {200, 100, 50, 20, 10, 5, 2, 1};
+};
+
+class P032 : public Solution {
+  public:
+  std::string solve() override {
+    std::set<int> seen;
+    do {
+      for (int product = 1; product < 7; product++) {
+        for (int equals = product + 1; equals < 8; equals++) {
+          int result = value(equals, 9);
+          if (value(0, product) * value(product, equals) == result) {
+            seen.insert(result);
+          }
+        }
+      }
+    } while (std::next_permutation(digits.begin(), digits.end()));
+    return std::to_string(std::accumulate(seen.begin(), seen.end(), 0));
+  }
+  private:
+  int value(int start, int end) {
+    int ans = 0;
+    for (int i = start; i < end; i++) {
+      ans = ans * 10 + digits[i];
+    }
+    return ans;
+  }
+  std::vector<int> digits = {1, 2, 3, 4, 5, 6, 7, 8, 9};  
+};
+
+class P033 : public Solution {
+  public:
+  std::string solve() override {
+    int num_prod = 1;
+    int den_prod = 1;
+
+    for (int num = 10; num < 100; ++num) {
+        for (int den = num + 1; den < 100; ++den) {
+            int a = num / 10;
+            int b = num % 10;
+            int c = den / 10;
+            int d = den % 10;
+
+            if (b == 0 && d == 0) 
+                continue;
+
+            if (b == c && d != 0 && a * den == num * d) {
+                num_prod *= a;
+                den_prod *= d;
+            }
+            else if (a == d && c != 0 && b * den == num * c) {
+                num_prod *= b;
+                den_prod *= c;
+            }
+            else if (a == c && d != 0 && b * den == num * d) {
+                num_prod *= b;
+                den_prod *= d;
+            }
+            else if (b == d && c != 0 && a * den == num * c) {
+                num_prod *= a;
+                den_prod *= c;
+            }
+
+            int g = std::gcd(num_prod, den_prod);
+            num_prod /= g;
+            den_prod /= g;
+        }
+    }
+    return std::to_string(den_prod);
+  }
+};
+
+template<typename T>
+T factorial(T n) {
+  T result = 1;
+  for (int i = 2; i <= n; i++) {
+    result *= i;
+  }
+  return result;
+}
+
+class P034 : public Solution {
+  public:
+  std::string solve() override {
+    int ans = 0;
+    for (int i = 3; i <= 100000; i++) {
+      int sum = 0, value = i;
+      while (value > 0) {
+        sum += factorial(value % 10);
+        value /= 10;
+      }
+      if (sum == i) {
+        ans += i;
+      }
+    }
+    return std::to_string(ans);
+  }
+};
+
 std::generator<int> sum_of_divisors_generator(int limit) {
   co_yield 0;
   for (int i = 1; i <= limit; i++) {
@@ -1006,6 +1124,10 @@ int main() {
     std::make_shared<P028>(),
     std::make_shared<P029>(),
     std::make_shared<P030>(),
+    std::make_shared<P031>(),
+    std::make_shared<P032>(),
+    std::make_shared<P033>(),
+    std::make_shared<P034>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());
