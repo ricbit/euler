@@ -1114,22 +1114,110 @@ bool prime_test(T value) {
   return value > 1;
 }
 
+template<typename T>
+std::generator<T> pandigital_generator(int n, int start) {
+  std::vector<int> digits(n);
+  for (int i = 0; i < n; i++) {
+    digits[i] = '0' + i + start;
+  }
+  do {
+    T value = static_cast<T>(0);
+    for (int digit : digits) {
+      value = value * 10 + digit - '0';
+    }
+    co_yield value;
+  } while (std::next_permutation(digits.begin(), digits.end()));
+}
+
 class P041 : public Solution {
   public:
   std::string solve() override {
     long long best = 0;
     for (int n = 2; n < 10; n++) {
-      std::vector<int> digits(n);
-      for (int i = 0; i < n; i++) {
-        digits[i] = '0' + i + 1;
-      }
-      do {
-        std::string s(digits.begin(), digits.end());
-        long long value = std::stoll(s);
+      for (long long value : pandigital_generator<long long>(n, 1)) {
         if (prime_test(value)) {
           best = std::max(best, value);
         }
-      } while (std::next_permutation(digits.begin(), digits.end()));
+      }
+    }
+    return std::to_string(best);
+  }
+};
+
+template<typename T>
+bool is_triangular(T n) {
+  int x = static_cast<T>(sqrt(2 * n));
+  return x * (x + 1) / 2 == n;
+}
+
+class P042 : public Solution {
+  public:
+  std::string solve() override {
+    int ans = 0;
+    for (const auto& word : p042_input) {
+      int score = std::accumulate(word.begin(), word.end(), 0, [](int acc, char c) {
+        return acc + c - 'A' + 1;
+      });
+      if (is_triangular(score)) {
+        ans++;
+      }
+    }
+    return std::to_string(ans);
+  }
+};
+
+class P043 : public Solution {
+  public:
+  P043(const std::vector<int>& primes)
+      : primes(primes) {
+  }
+  std::string solve() override {
+    long long ans = 0;
+    for (long long n : pandigital_generator<long long>(10, 0)) {
+      if (is_substring_divisible(n)) {
+        ans += n;
+      }
+    }
+    return std::to_string(ans);
+  }
+  private:
+  bool is_substring_divisible(long long n) {
+    for (int i = 6; i >= 0; i--) {
+      if (n % 1000 % primes[i] != 0) {
+        return false;
+      }
+      n /= 10;
+    }
+    return true;
+  }
+  std::vector<int> primes;
+};
+
+long long pentagonal(long long n) {
+  return n * (3 * n - 1) / 2;
+}
+
+bool is_pentagonal(long long n) {
+  long long d = 24 * n + 1;
+  long long x = static_cast<long long>(sqrt(d));
+  if (x * x != d) {
+    return false;
+  }
+  return (1 + x) % 6 == 0;
+}
+
+class P044 : public Solution {
+  public:
+  std::string solve() override {
+    long long best = 1e12;
+    for (int i = 1; i < 5000; i++) {
+      long long pi = pentagonal(i);
+      for (int j = i + 1; j < 5000; j++) {
+        long long pj = pentagonal(j);
+        if (is_pentagonal(pj - pi) && is_pentagonal(pi + pj)) {
+          best = std::min(best, pj - pi);
+        }
+      }
     }
     return std::to_string(best);
   }
@@ -1181,6 +1269,9 @@ int main() {
     std::make_shared<P039>(),
     std::make_shared<P040>(),
     std::make_shared<P041>(),
+    std::make_shared<P042>(),
+    std::make_shared<P043>(primes),
+    std::make_shared<P044>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());
