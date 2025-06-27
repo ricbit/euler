@@ -16,6 +16,7 @@
 #include <vector>
 #include <memory>
 #include <numeric>
+#include <map>
 #include <array>
 #include <unordered_set>
 #include <gmpxx.h>
@@ -560,7 +561,7 @@ class P020 : public Solution {
 };
 
 template<typename T>
-T ipow(T base, T exp) {
+constexpr T ipow(T base, T exp) {
   T res = 1;
   while (exp > 0) {
     if (exp % 2 == 1) {
@@ -754,13 +755,14 @@ class P028 : public Solution {
 };
 
 template<typename T>
-T modpow(T base, T exp, T prime) {
+T modpow(T base, T exp, T mod) {
   T res = 1;
+  base %= mod;
   while (exp > 0) {
     if (exp % 2 == 1) {
-      res = res * base % prime;
+      res = res * base % mod;
     }
-    base = base * base % prime;
+    base = base * base % mod;
     exp /= 2;
   }
   return res;
@@ -1193,8 +1195,16 @@ class P043 : public Solution {
   std::vector<int> primes;
 };
 
+long long triangular(long long n) {
+  return n * (n + 1) / 2;
+}
+
 long long pentagonal(long long n) {
   return n * (3 * n - 1) / 2;
+}
+
+long long hexagonal(long long n) {
+  return n * (2 * n - 1);
 }
 
 bool is_pentagonal(long long n) {
@@ -1223,10 +1233,473 @@ class P044 : public Solution {
   }
 };
 
+class P045 : public Solution {
+  public:
+  std::string solve() override {
+    long long t = 285, p = 165, h = 143;
+    t++;
+    while (true) {
+      long long tn = triangular(t);
+      long long pn = pentagonal(p);
+      long long hn = hexagonal(h);
+      if (tn == pn && pn == hn) {
+        return std::to_string(tn);
+      }
+      if (tn <= pn && tn <= hn) {
+        t++;
+      } else if (pn <= tn && pn <= hn) {
+        p++;
+      } else {
+        h++;
+      }
+    }
+    std::unreachable();
+  }
+};
+
+class P046 : public Solution {
+  public:
+  P046(const std::unordered_set<int>& prime_set)
+      : prime_set(prime_set) {
+  }
+  std::string solve() override {
+    for (int n = 9;; n += 2) {
+      if (prime_set.contains(n)) {
+        continue;
+      }
+      if (!is_twice_square(n)) {
+        return std::to_string(n);
+      }
+    }
+    std::unreachable();
+  }
+  private:
+  bool is_twice_square(int n) {
+    for (int i = 1; i * i * 2 < n; i++) {
+      int candidate = n - 2 * i * i;
+      if (candidate > 0 && prime_set.contains(candidate)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  const std::unordered_set<int>& prime_set;
+};
+
+class P047 : public Solution {
+  public:
+  std::string solve() override {
+    int consecutive = 0;
+    for (int n = 1; n < 1000000; n++) {
+      int len = std::ranges::distance(group_factor_integer(n));
+      if (len == 4) {
+        consecutive++;
+        if (consecutive == 4) {
+          return std::to_string(n - 3);
+        }
+      } else {
+        consecutive = 0;
+      }
+    }
+    std::unreachable();
+  }
+};
+
+class P048 : public Solution {
+  public:
+  std::string solve() override {
+    mpz_class ans = 0;
+    mpz_class digits = ipow(mpz_class(10), mpz_class(10));
+    for (mpz_class i = 1; i <= 1000; i++) {
+      ans += modpow(i, i, digits);
+    }
+    std::ostringstream oss;
+    oss << ans % digits;
+    return oss.str();
+  }
+};
+
+class P049 : public Solution {
+  public:
+  P049(const std::vector<int>& primes, const std::unordered_set<int>& prime_set)
+      : primes(primes), prime_set(prime_set) {
+  }
+  std::string solve() override {
+    std::string ans;
+    for (int i = 0; primes[i] < 10000; i++) {
+      if (primes[i] <= 1487) {
+        continue;
+      }
+      for (int j = i + 1; primes[j] < 10000; j++) {
+        int k = primes[i] + 2 * (primes[j] - primes[i]);
+        if (k < 10000 && prime_set.contains(k) && is_anagram(primes[i], primes[j], k)) {
+          return std::to_string(primes[i]) + std::to_string(primes[j]) + std::to_string(k);
+        }
+      }
+    }
+    std::unreachable();
+  }
+
+  private:
+  const std::vector<int>& primes;
+  const std::unordered_set<int>& prime_set;
+  bool is_anagram(int a, int b, int c) {
+    return std::ranges::is_permutation(std::to_string(a), std::to_string(b)) &&
+           std::ranges::is_permutation(std::to_string(a), std::to_string(c));
+  }
+};
+
+class P050 : public Solution {
+  public:
+  P050(const std::vector<int>& primes, const std::unordered_set<int>& prime_set)
+      : primes(primes), prime_set(prime_set) {
+  }
+  std::string solve() override {
+    int best = 0, stride = 0;
+    for (int i = 0; primes[i] < 1'000'000; i++) {
+      int total = primes[i];
+      for (int j = 1; primes[i + j] < 1'000'000; j++) {
+        total += primes[i + j];
+        if (total >= 1'000'000) {
+          break;
+        }
+        if (j > stride && prime_set.contains(total)) {
+          best = total;
+          stride = j;
+        }         
+      }
+    }
+    return std::to_string(best);
+  }
+  private:
+  const std::vector<int>& primes;
+  const std::unordered_set<int>& prime_set;
+};
+
+class P051 : public Solution {
+  public:
+  P051(const std::vector<int>& primes, const std::unordered_set<int>& prime_set)
+      : primes(primes), prime_set(prime_set) {
+  }
+  std::string solve() override {
+
+    // precompute powers of 10
+    int pow10[10];
+    pow10[0] = 1;
+    for (int i = 1; i < 10; ++i) pow10[i] = pow10[i-1] * 10;
+
+    for (size_t idx = 0; idx < primes.size(); ++idx) {
+      int p = primes[idx];
+      if (p < 10) {
+        continue;
+      }
+      std::string s = std::to_string(p);
+      int d = s.size();
+      int limit = pow10[d - 1];
+      int max_mask = (1 << d) - 1;
+      // iterate all non-empty, non-full masks
+      for (int mask = 1; mask < max_mask; ++mask) {
+        if (mask == max_mask) break;
+        // build base by zeroing masked digits
+        int base = 0;
+        for (int i = 0; i < d; ++i) {
+            char c = ((mask >> (d - 1 - i)) & 1) ? '0' : s[i];
+            base = base * 10 + (c - '0');
+        }
+        int imask = compute_imask(mask, d);
+        int candidate = search_candidate(base, imask, limit);
+        if (candidate > 0) {
+          return std::to_string(candidate);
+        }
+        }
+      }
+      std::unreachable();
+    }
+  
+  private:
+  const std::vector<int>& primes;
+  const std::unordered_set<int>& prime_set;
+  int compute_imask(int mask, int d) {
+    int imask = 0;
+    for (int i = 0; i < d; ++i) {
+        int bit = (mask >> (d-1-i)) & 1;
+        imask = imask * 10 + bit;
+    }
+    return imask;
+  }
+  int search_candidate(int base, int imask, int limit) {
+    int count = 0;
+    for (int digit = 0; digit < 10; ++digit) {
+      int candidate = base + digit * imask;
+      if (candidate >= limit && candidate < limit*10 && prime_set.contains(candidate)) {
+          ++count;
+      }
+      if (count >= 8) {
+        for (int digit = 0; digit < 10; ++digit) {
+          int candidate = base + digit * imask;
+          if (prime_set.contains(candidate)) {
+            return candidate;
+          }
+        }
+      }
+    }
+    return -1;
+  }
+};
+
+class P052 : public Solution {
+  public:
+  std::string solve() override {
+    for (int i = 1; ; i++) {
+      if (works(i)) {
+        return std::to_string(i);
+      }
+    }
+    std::unreachable();
+  }
+
+  private:
+  bool works(int n) {
+    std::string s = std::to_string(n);
+    for (int i = 2; i <= 6; i++) {
+      std::string s2 = std::to_string(n * i);
+      if (!std::ranges::is_permutation(s, s2)) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+
+class P053 : public Solution {
+  public:
+  std::string solve() override {
+    int count = 0;
+    for (int n = 1; n <= 100; n++) {
+      for (int r = 0; r <= n; r++) {
+        if (binomial<mpz_class>(n, r) > 1'000'000) {
+          count++;
+        }
+      }
+    }
+    return std::to_string(count);
+  }
+};
+
+class P054 : public Solution {
+  public:
+  std::string solve() override {
+      std::vector<std::pair<Hand, Hand>> hands;
+      std::istringstream infile(p054_input);
+      std::string line;
+      while (std::getline(infile, line)) {
+          std::istringstream iss(line);
+          std::vector<std::string> s;
+          std::string token;
+          while (iss >> token) s.push_back(token);
+          if (s.size() != 10) continue;
+          hands.emplace_back(
+              parse_hand({s[0], s[1], s[2], s[3], s[4]}),
+              parse_hand({s[5], s[6], s[7], s[8], s[9]})
+          );
+      }
+      int p1wins = 0;
+      for (const auto& [p1, p2] : hands) {
+          if (winner(p1, p2) == 1) ++p1wins;
+      }
+      return std::to_string(p1wins);
+  }
+  private:
+  using Card = std::pair<int, char>;
+  using Hand = std::vector<Card>;
+  using ScoreResult = std::pair<bool, std::vector<int>>;
+  using ScoreFunc = std::function<ScoreResult(const Hand&)>;
+  using ScorePair = std::pair<std::string, ScoreFunc>;
+  using ScoreInfo = std::tuple<int, std::string, std::vector<int>>;
+
+  const std::map<char, int> values = {
+      {'2', 2}, {'3', 3}, {'4', 4}, {'5', 5}, {'6', 6},
+      {'7', 7}, {'8', 8}, {'9', 9}, {'T', 10}, {'J', 11},
+      {'Q', 12}, {'K', 13}, {'A', 14}
+  };
+
+  Hand parse_hand(const std::vector<std::string>& cards) {
+      Hand hand;
+      for (const auto& cs : cards) {
+          char rank = cs[0];
+          char suit = cs[1];
+          hand.emplace_back(values.at(rank), suit);
+      }
+      std::sort(hand.begin(), hand.end());
+      return hand;
+  }
+
+  std::vector<int> discarded(const Hand& hand, const std::vector<int>& skips) {
+      std::vector<int> result = skips;
+      for (auto it = hand.rbegin(); it != hand.rend(); ++it) {
+          int rank = it->first;
+          if (std::find(skips.begin(), skips.end(), rank) == skips.end())
+              result.push_back(rank);
+      }
+      return result;
+  }
+
+  ScoreResult high_card(const Hand& hand) {
+      return {true, discarded(hand, {})};
+  }
+
+  std::map<int,int> count_ranks(const Hand& hand) {
+      std::map<int,int> c;
+      for (const auto& [rank, suit] : hand) c[rank]++;
+      return c;
+  }
+
+  std::map<char,int> count_suits(const Hand& hand) {
+      std::map<char,int> c;
+      for (const auto& [rank, suit] : hand) c[suit]++;
+      return c;
+  }
+
+  ScoreResult one_pair(const Hand& hand) {
+      auto c = count_ranks(hand);
+      int mx = std::max_element(c.begin(), c.end(),
+          [](auto &a, auto &b){ return a.second < b.second; })->second;
+      if (mx != 2) return {false, {}};
+      std::vector<int> ranks;
+      for (auto& [k, v] : c) if (v == 2) ranks.push_back(k);
+      if (ranks.size() > 1) return {false, {}};
+      return {true, discarded(hand, {ranks[0]})};
+  }
+
+  ScoreResult two_pairs(const Hand& hand) {
+      auto c = count_ranks(hand);
+      int mx = std::max_element(c.begin(), c.end(),
+          [](auto &a, auto &b){ return a.second < b.second; })->second;
+      if (mx != 2) return {false, {}};
+      std::vector<int> ranks;
+      for (auto& [k, v] : c) if (v == 2) ranks.push_back(k);
+      if (ranks.size() != 2) return {false, {}};
+      int r1 = std::max(ranks[0], ranks[1]);
+      int r2 = std::min(ranks[0], ranks[1]);
+      return {true, discarded(hand, {r1, r2})};
+  }
+
+  ScoreResult three_of_a_kind(const Hand& hand) {
+      auto c = count_ranks(hand);
+      int mx = std::max_element(c.begin(), c.end(),
+          [](auto &a, auto &b){ return a.second < b.second; })->second;
+      if (mx != 3) return {false, {}};
+      if (std::any_of(c.begin(), c.end(), [](auto &p){ return p.second == 2; }))
+          return {false, {}};
+      std::vector<int> ranks;
+      for (auto& [k, v] : c) if (v == 3) ranks.push_back(k);
+      return {true, discarded(hand, ranks)};
+  }
+
+  ScoreResult full_house(const Hand& hand) {
+      auto c = count_ranks(hand);
+      bool has3 = std::any_of(c.begin(), c.end(), [](auto &p){ return p.second == 3; });
+      bool has2 = std::any_of(c.begin(), c.end(), [](auto &p){ return p.second == 2; });
+      if (!has3 || !has2) return {false, {}};
+      int big = 0, small = 0;
+      for (auto& [k, v] : c) if (v == 3) big = k;
+      for (auto& [k, v] : c) if (v == 2) small = k;
+      return {true, discarded(hand, {big, small})};
+  }
+
+  bool consecutive(const Hand& hand) {
+      for (size_t i = 1; i < hand.size(); ++i)
+          if (hand[i].first != hand[i-1].first + 1)
+              return false;
+      return true;
+  }
+
+  ScoreResult straight(const Hand& hand) {
+      if (!consecutive(hand)) return {false, {}};
+      std::vector<int> r;
+      for (auto it = hand.rbegin(); it != hand.rend(); ++it)
+          r.push_back(it->first);
+      return {true, r};
+  }
+
+  ScoreResult flush(const Hand& hand) {
+      auto c = count_suits(hand);
+      int mx = std::max_element(c.begin(), c.end(),
+          [](auto &a, auto &b){ return a.second < b.second; })->second;
+      if (mx != 5) return {false, {}};
+      std::vector<int> r;
+      for (auto it = hand.rbegin(); it != hand.rend(); ++it)
+          r.push_back(it->first);
+      return {true, r};
+  }
+
+  ScoreResult straight_flush(const Hand& hand) {
+      auto s = straight(hand);
+      if (!s.first) return {false, {}};
+      auto f = flush(hand);
+      if (!f.first) return {false, {}};
+      return s;
+  }
+
+  ScoreResult royal_flush(const Hand& hand) {
+      if (!consecutive(hand)) return {false, {}};
+      auto c_suit = count_suits(hand);
+      int mx = std::max_element(c_suit.begin(), c_suit.end(),
+          [](auto &a, auto &b){ return a.second < b.second; })->second;
+      if (mx != 5) return {false, {}};
+      if (hand[0].first != 10) return {false, {}};
+      std::vector<int> r;
+      for (auto it = hand.rbegin(); it != hand.rend(); ++it)
+          r.push_back(it->first);
+      return {true, r};
+  }
+
+  ScoreResult four_of_a_kind(const Hand& hand) {
+      auto c = count_ranks(hand);
+      int mx = std::max_element(c.begin(), c.end(),
+          [](auto &a, auto &b){ return a.second < b.second; })->second;
+      if (mx != 4) return {false, {}};
+      std::vector<int> ranks;
+      for (auto& [k, v] : c) if (v == 4) ranks.push_back(k);
+      return {true, discarded(hand, ranks)};
+  }
+
+  const std::vector<ScorePair> scores = {
+      {"royal_flush", [&](const Hand& hand) { return royal_flush(hand); }},
+      {"straight_flush", [&](const Hand& hand) { return straight_flush(hand); }},
+      {"four_of_a_kind", [&](const Hand& hand) { return four_of_a_kind(hand); }},
+      {"full_house", [&](const Hand& hand) { return full_house(hand); }},
+      {"flush", [&](const Hand& hand) { return flush(hand); }},
+      {"straight", [&](const Hand& hand) { return straight(hand); }},
+      {"three_of_a_kind", [&](const Hand& hand) { return three_of_a_kind(hand); }},
+      {"two_pairs", [&](const Hand& hand) { return two_pairs(hand); }},
+      {"one_pair", [&](const Hand& hand) { return one_pair(hand); }},
+      {"high_card", [&](const Hand& hand) { return high_card(hand); }},
+  };
+
+  ScoreInfo best_score(const Hand& hand) {
+      for (size_t i = 0; i < scores.size(); ++i) {
+          const auto& [name, func] = scores[i];
+          auto [res, val] = func(hand);
+          if (res) {
+              return {static_cast<int>(scores.size() - i), name, val};
+          }
+      }
+      return {0, "none", {}};
+  }
+
+  int winner(const Hand& p1, const Hand& p2) {
+      auto [s1, n1, v1] = best_score(p1);
+      auto [s2, n2, v2] = best_score(p2);
+      if (std::tie(s1, v1) > std::tie(s2, v2)) return 1;
+      else return 2;
+  }
+};
+
 int main() {
-  std::vector<int> primes = fill_vector(sieve_generator(2'000'000));
-  std::unordered_set<int> prime_set(primes.begin(), primes.end());
-  std::vector<int> divisor_sums = fill_vector(sum_of_divisors_generator(28'123));
+  const std::vector<int> primes = fill_vector(sieve_generator(2'000'000));
+  const std::unordered_set<int> prime_set(primes.begin(), primes.end());
+  const std::vector<int> divisor_sums = fill_vector(sum_of_divisors_generator(28'123));
   std::vector<std::shared_ptr<Solution>> solutions = {
     std::make_shared<P001>(),
     std::make_shared<P002>(),
@@ -1272,6 +1745,16 @@ int main() {
     std::make_shared<P042>(),
     std::make_shared<P043>(primes),
     std::make_shared<P044>(),
+    std::make_shared<P045>(),
+    std::make_shared<P046>(prime_set),
+    std::make_shared<P047>(),
+    std::make_shared<P048>(),
+    std::make_shared<P049>(primes, prime_set),
+    std::make_shared<P050>(primes, prime_set),
+    std::make_shared<P051>(primes, prime_set),
+    std::make_shared<P052>(),
+    std::make_shared<P053>(),
+    std::make_shared<P054>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());
