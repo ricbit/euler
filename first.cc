@@ -22,6 +22,7 @@
 #include <gmpxx.h>
 
 #include "first_input.hh"
+#include "euler.hh"
 
 class Solution {
   public:
@@ -41,16 +42,6 @@ class P001 : public Solution {
   }
 };
 
-std::generator<int> fibonacci_generator() {
-  int a = 0, b = 1;
-  while (true) {
-    co_yield b;
-    int c = a + b;
-    a = b;
-    b = c;
-  }
-}
-
 class P002 : public Solution {
   public:
   std::string solve() override {
@@ -67,22 +58,6 @@ class P002 : public Solution {
   }
 };
 
-template<typename T>
-std::generator<T> factor_integer(T n) {
-  T factor = 2;
-  T limit = static_cast<T>(sqrt(n));
-  while (factor <= limit) {
-    while (n % factor == 0) {
-      co_yield factor;
-      n /= factor;
-    }
-    factor++;
-  }
-  if (n > 1) {
-    co_yield n;
-  }
-}
-
 class P003 : public Solution {
   public:
    std::string solve() override {
@@ -90,15 +65,6 @@ class P003 : public Solution {
    }
 };
  
-bool is_palindrome(int n) {
-  int reversed = 0, original = n;
-  while (original) {
-    reversed = reversed * 10 + original % 10;
-    original /= 10;
-  }
-  return n == reversed;
-}
-
 class P004 : public Solution {
   public:
   std::string solve() override {
@@ -114,21 +80,6 @@ class P004 : public Solution {
     return std::to_string(best);
   }
 };
-
-template<typename T>
-T gcd(T a, T b) {
-  while (b != 0) {
-    T temp = b;
-    b = a % b;
-    a = temp;
-  }
-  return a;
-}
-
-template<typename T>
-T lcm(T a, T b) { 
-  return a / gcd(a, b) * b;
-}
 
 class P005 : public Solution {
   public:
@@ -154,25 +105,6 @@ class P006 : public Solution {
   }
 };
 
-std::generator<int> sieve_generator(int limit) {
-  std::vector<bool> primes(limit + 1, true);
-  int sqrt_limit = static_cast<int>(sqrt(limit));
-  int p = 2;
-  for (; p <= sqrt_limit; p++) {
-    if (primes[p]) {
-      co_yield p; // Yield the prime number
-      for (int i = p * p; i <= limit; i += p) {
-        primes[i] = false;
-      }
-    }
-  }
-  for (;p <= limit; p++) {
-    if (primes[p]) {
-      co_yield p; // Yield the prime number
-    }
-  }
-}
-
 class P007 : public Solution {
   public:
   P007(const std::vector<int>& primes) : primes(primes) {
@@ -185,29 +117,6 @@ class P007 : public Solution {
   private:
   const std::vector<int>& primes;
 };
-
-std::generator<int> digit_generator(const std::string& str) {
-  for (char c : str) {
-    if (std::isdigit(c)) {
-      co_yield static_cast<int>(c - '0');
-    }
-  }
-}
-
-template<typename T, int SIZE>
-std::generator<std::array<T, SIZE>> window_generator(std::generator<T> gen) {
-  std::array<int, SIZE> window;
-  for (int i = 0; int elem : gen) {
-    if (i < SIZE - 1) {
-      window[i + 1] = elem;
-    } else {
-      std::rotate(window.begin(), window.begin() + 1, window.end());
-      window[SIZE - 1] = elem;
-      co_yield window;
-    }
-    i++;
-  }
-}
 
 class P008 : public Solution {
   public:
@@ -250,24 +159,6 @@ class P010 : public Solution {
   const std::vector<int>& primes;
 };
 
-template<typename T>
-std::vector<T> fill_vector(std::generator<T> gen) {
-  std::vector<T> vec;
-  for (auto it = gen.begin(); it != gen.end(); ++it) {
-    vec.push_back(*it);
-  }
-  return vec;
-}
-
-template<typename T>
-std::generator<T> parse_numbers(const std::string& grid) {
-  std::istringstream iss(grid);
-  T value;
-  while (iss >> value) {
-    co_yield value;
-  }
-}
-
 class P011 : public Solution {
   public:
   std::string solve() override {
@@ -303,41 +194,6 @@ class P011 : public Solution {
 
 };
 
-std::generator<int> triangular_generator() {
-  int triangular = 0, i = 1; 
-  while (true) {
-    triangular += i;
-    co_yield triangular;
-    i++;
-  }
-}
-
-std::generator<std::pair<int, int>> group_factor_integer(int n) {
-  int count = 0, last = 0;
-  for (auto p : factor_integer(n)) {
-    if (p != last) {
-      if (last == 0) {
-        count = 1;
-      } else {
-        co_yield {last, count};
-        count = 1;
-      }
-      last = p;
-    } else {
-      count++;
-    }    
-  }
-  co_yield {last, count};
-}
-
-int num_of_divisors(int n) {
-  int ans = 1;
-  for (auto [p, exp] : group_factor_integer(n)) {
-    ans *= exp + 1;
-  }
-  return ans;
-}
-
 class P012 : public Solution {
   public:
   std::string solve() override {
@@ -360,18 +216,6 @@ class P013 : public Solution {
     return oss.str().substr(0, 10);
   }
 };
-
-std::generator<long long> collatz_generator(long long n) {
-  while (n != 1) {
-    co_yield n;
-    if (n % 2 == 0) {
-      n /= 2;
-    } else {
-      n = 3 * n + 1;
-    }
-  }
-  co_yield 1; // Yield the last element
-}
 
 class P014 : public Solution {
   public:
@@ -410,19 +254,6 @@ class P014 : public Solution {
     return std::to_string(best_index);
   }
 };
-
-template<typename T>
-T binomial(int n, int k) {
-  if (k < 0 || k > n) {
-    return 0;
-  }
-  T result = 1;
-  for (int i = 0; i < k; i++) {
-    result *= n - i;
-    result /= i + 1;
-  }
-  return result;
-}
 
 class P015 : public Solution {
   public:
@@ -559,27 +390,6 @@ class P020 : public Solution {
     return std::to_string(sum);
   }
 };
-
-template<typename T>
-constexpr T ipow(T base, T exp) {
-  T res = 1;
-  while (exp > 0) {
-    if (exp % 2 == 1) {
-      res *= base;
-    }
-    base *= base;
-    exp /= 2;
-  }
-  return res;
-}
-
-int sum_of_divisors(int n) {
-  int ans = 1;
-  for (auto [p, exp] : group_factor_integer(n)) {
-    ans *= (ipow(p, exp + 1) -  1) / (p - 1);
-  }
-  return ans;
-}
 
 class P021 : public Solution {
   public:
@@ -754,20 +564,6 @@ class P028 : public Solution {
   }
 };
 
-template<typename T>
-T modpow(T base, T exp, T mod) {
-  T res = 1;
-  base %= mod;
-  while (exp > 0) {
-    if (exp % 2 == 1) {
-      res = res * base % mod;
-    }
-    base = base * base % mod;
-    exp /= 2;
-  }
-  return res;
-}
-
 class P029 : public Solution {
   public:
   std::string solve() override {
@@ -892,15 +688,6 @@ class P033 : public Solution {
   }
 };
 
-template<typename T>
-T factorial(T n) {
-  T result = 1;
-  for (int i = 2; i <= n; i++) {
-    result *= i;
-  }
-  return result;
-}
-
 class P034 : public Solution {
   public:
   std::string solve() override {
@@ -918,10 +705,6 @@ class P034 : public Solution {
     return std::to_string(ans);
   }
 };
-
-int digits(long long n) {
-  return static_cast<int>(std::floor(std::log10(n))) + 1;      
-}
 
 class P035 : public Solution {
   public:
@@ -945,12 +728,11 @@ class P035 : public Solution {
   private:
   bool is_circular_prime(int n, int digits) {
     int value = n;
-    int power = ipow(10, digits - 1);
     for (int i = 0; i < digits; i++) {
       if (prime_set.find(value) == prime_set.end()) {
         return false;
       }
-      value = (value % 10) * power + value / 10;
+      value = (value % 10) * powers10[digits - 1] + value / 10;
     }
     return true;
   }
@@ -958,26 +740,12 @@ class P035 : public Solution {
   const std::unordered_set<int>& prime_set;
 };
 
-bool is_palindrome(const std::string_view n) {
-  return n == std::string(n.crbegin(), n.crend());
-}
-
-std::string to_binary(int n) {
-  std::string binary;
-  while (n > 0) {
-    binary.push_back((n % 2) + '0');
-    n /= 2;
-  }
-  std::reverse(binary.begin(), binary.end());
-  return binary;
-}
-
 class P036 : public Solution {
   public:
   std::string solve() override {
     int ans = 0;
     for (int i = 1; i < 1'000'000; i++) {
-      if (is_palindrome(i) && is_palindrome(to_binary(i))) {
+      if (is_palindrome(i) && is_palindrome(to_binary_string(i))) {
         ans += i;
       }
     }
@@ -1056,13 +824,6 @@ class P038 : public Solution {
   }
 };
 
-std::generator<int> sum_of_divisors_generator(int limit) {
-  co_yield 0;
-  for (int i = 1; i <= limit; i++) {
-    co_yield sum_of_divisors(i);
-  }
-}
-
 class P039 : public Solution {
   public:
   std::string solve() override {
@@ -1106,31 +867,6 @@ class P040 : public Solution {
   }
 };
 
-template<typename T>
-bool prime_test(T value) {
-  for (int i = 2; i * i <= value; i++) {
-    if (value % i == 0) {
-      return false;
-    }
-  }
-  return value > 1;
-}
-
-template<typename T>
-std::generator<T> pandigital_generator(int n, int start) {
-  std::vector<int> digits(n);
-  for (int i = 0; i < n; i++) {
-    digits[i] = '0' + i + start;
-  }
-  do {
-    T value = static_cast<T>(0);
-    for (int digit : digits) {
-      value = value * 10 + digit - '0';
-    }
-    co_yield value;
-  } while (std::next_permutation(digits.begin(), digits.end()));
-}
-
 class P041 : public Solution {
   public:
   std::string solve() override {
@@ -1145,12 +881,6 @@ class P041 : public Solution {
     return std::to_string(best);
   }
 };
-
-template<typename T>
-bool is_triangular(T n) {
-  int x = static_cast<T>(sqrt(2 * n));
-  return x * (x + 1) / 2 == n;
-}
 
 class P042 : public Solution {
   public:
@@ -1194,27 +924,6 @@ class P043 : public Solution {
   }
   std::vector<int> primes;
 };
-
-long long triangular(long long n) {
-  return n * (n + 1) / 2;
-}
-
-long long pentagonal(long long n) {
-  return n * (3 * n - 1) / 2;
-}
-
-long long hexagonal(long long n) {
-  return n * (2 * n - 1);
-}
-
-bool is_pentagonal(long long n) {
-  long long d = 24 * n + 1;
-  long long x = static_cast<long long>(sqrt(d));
-  if (x * x != d) {
-    return false;
-  }
-  return (1 + x) % 6 == 0;
-}
 
 class P044 : public Solution {
   public:
@@ -1382,12 +1091,6 @@ class P051 : public Solution {
       : primes(primes), prime_set(prime_set) {
   }
   std::string solve() override {
-
-    // precompute powers of 10
-    int pow10[10];
-    pow10[0] = 1;
-    for (int i = 1; i < 10; ++i) pow10[i] = pow10[i-1] * 10;
-
     for (size_t idx = 0; idx < primes.size(); ++idx) {
       int p = primes[idx];
       if (p < 10) {
@@ -1395,7 +1098,7 @@ class P051 : public Solution {
       }
       std::string s = std::to_string(p);
       int d = s.size();
-      int limit = pow10[d - 1];
+      int limit = powers10[d - 1];
       int max_mask = (1 << d) - 1;
       // iterate all non-empty, non-full masks
       for (int mask = 1; mask < max_mask; ++mask) {
@@ -1419,14 +1122,16 @@ class P051 : public Solution {
   private:
   const std::vector<int>& primes;
   const std::unordered_set<int>& prime_set;
+
   int compute_imask(int mask, int d) {
     int imask = 0;
     for (int i = 0; i < d; ++i) {
-        int bit = (mask >> (d-1-i)) & 1;
+        int bit = (mask >> (d - 1 - i)) & 1;
         imask = imask * 10 + bit;
     }
     return imask;
   }
+
   int search_candidate(int base, int imask, int limit) {
     int count = 0;
     for (int digit = 0; digit < 10; ++digit) {
@@ -1450,12 +1155,8 @@ class P051 : public Solution {
 class P052 : public Solution {
   public:
   std::string solve() override {
-    for (int i = 1; ; i++) {
-      if (works(i)) {
-        return std::to_string(i);
-      }
-    }
-    std::unreachable();
+    auto it = std::ranges::find_if(std::views::iota(1), [&](int n) { return works(n); });
+    return std::to_string(*it);
   }
 
   private:
@@ -1538,8 +1239,9 @@ class P054 : public Solution {
       std::vector<int> result = skips;
       for (auto it = hand.rbegin(); it != hand.rend(); ++it) {
           int rank = it->first;
-          if (std::find(skips.begin(), skips.end(), rank) == skips.end())
+          if (std::find(skips.begin(), skips.end(), rank) == skips.end()) {
               result.push_back(rank);
+          }
       }
       return result;
   }
@@ -1549,33 +1251,47 @@ class P054 : public Solution {
   }
 
   std::map<int,int> count_ranks(const Hand& hand) {
-      std::map<int,int> c;
-      for (const auto& [rank, suit] : hand) c[rank]++;
+      std::map<int, int> c;
+      for (const auto& [rank, suit] : hand) {
+        c[rank]++;
+      }
       return c;
   }
 
-  std::map<char,int> count_suits(const Hand& hand) {
-      std::map<char,int> c;
-      for (const auto& [rank, suit] : hand) c[suit]++;
+  std::map<char, int> count_suits(const Hand& hand) {
+      std::map<char, int> c;
+      for (const auto& [rank, suit] : hand) {
+        c[suit]++;
+      }
       return c;
+  }
+
+  template<typename T>
+  int max_rank(const T& c) {
+    return std::max_element(c.begin(), c.end(),
+        [](auto &a, auto &b){ return a.second < b.second; })->second;
   }
 
   ScoreResult one_pair(const Hand& hand) {
       auto c = count_ranks(hand);
-      int mx = std::max_element(c.begin(), c.end(),
-          [](auto &a, auto &b){ return a.second < b.second; })->second;
-      if (mx != 2) return {false, {}};
+      if (max_rank(c) != 2) {
+        return {false, {}};
+      }
       std::vector<int> ranks;
-      for (auto& [k, v] : c) if (v == 2) ranks.push_back(k);
-      if (ranks.size() > 1) return {false, {}};
+      for (auto& [k, v] : c) {
+        if (v == 2) {
+          ranks.push_back(k);
+        }
+      }
+      if (ranks.size() > 1) {                
+        return {false, {}};
+      }
       return {true, discarded(hand, {ranks[0]})};
   }
 
   ScoreResult two_pairs(const Hand& hand) {
       auto c = count_ranks(hand);
-      int mx = std::max_element(c.begin(), c.end(),
-          [](auto &a, auto &b){ return a.second < b.second; })->second;
-      if (mx != 2) return {false, {}};
+      if (max_rank(c) != 2) return {false, {}};
       std::vector<int> ranks;
       for (auto& [k, v] : c) if (v == 2) ranks.push_back(k);
       if (ranks.size() != 2) return {false, {}};
@@ -1586,9 +1302,7 @@ class P054 : public Solution {
 
   ScoreResult three_of_a_kind(const Hand& hand) {
       auto c = count_ranks(hand);
-      int mx = std::max_element(c.begin(), c.end(),
-          [](auto &a, auto &b){ return a.second < b.second; })->second;
-      if (mx != 3) return {false, {}};
+      if (max_rank(c) != 3) return {false, {}};
       if (std::any_of(c.begin(), c.end(), [](auto &p){ return p.second == 2; }))
           return {false, {}};
       std::vector<int> ranks;
@@ -1624,9 +1338,7 @@ class P054 : public Solution {
 
   ScoreResult flush(const Hand& hand) {
       auto c = count_suits(hand);
-      int mx = std::max_element(c.begin(), c.end(),
-          [](auto &a, auto &b){ return a.second < b.second; })->second;
-      if (mx != 5) return {false, {}};
+      if (max_rank(c) != 5) return {false, {}};
       std::vector<int> r;
       for (auto it = hand.rbegin(); it != hand.rend(); ++it)
           r.push_back(it->first);
@@ -1644,9 +1356,7 @@ class P054 : public Solution {
   ScoreResult royal_flush(const Hand& hand) {
       if (!consecutive(hand)) return {false, {}};
       auto c_suit = count_suits(hand);
-      int mx = std::max_element(c_suit.begin(), c_suit.end(),
-          [](auto &a, auto &b){ return a.second < b.second; })->second;
-      if (mx != 5) return {false, {}};
+      if (max_rank(c_suit) != 5) return {false, {}};
       if (hand[0].first != 10) return {false, {}};
       std::vector<int> r;
       for (auto it = hand.rbegin(); it != hand.rend(); ++it)
@@ -1656,9 +1366,7 @@ class P054 : public Solution {
 
   ScoreResult four_of_a_kind(const Hand& hand) {
       auto c = count_ranks(hand);
-      int mx = std::max_element(c.begin(), c.end(),
-          [](auto &a, auto &b){ return a.second < b.second; })->second;
-      if (mx != 4) return {false, {}};
+      if (max_rank(c) != 4) return {false, {}};
       std::vector<int> ranks;
       for (auto& [k, v] : c) if (v == 4) ranks.push_back(k);
       return {true, discarded(hand, ranks)};
@@ -1694,6 +1402,108 @@ class P054 : public Solution {
       if (std::tie(s1, v1) > std::tie(s2, v2)) return 1;
       else return 2;
   }
+};
+
+
+class P055 : public Solution {
+  public:
+  std::string solve() override {
+    int count = 0;
+    for (long long i = 1; i < 10'000; i++) {
+      if (is_lychrel(i)) {
+        count++;
+      }
+    }
+    return std::to_string(count);
+  }
+
+  private:
+  bool is_lychrel(long long n) {
+    for (int i = 0; i < 50; i++) {
+      n += reverse_digits(n);
+      if (is_palindrome(n)) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+
+class P056 : public Solution {
+  public:
+  std::string solve() override {
+    int max_sum = 0;
+    for (mpz_class a = 1; a < 100; a++) {
+      for (mpz_class b = 1; b < 100; b++) {
+        mpz_class power = ipow(a, b);
+        int sum = digit_sum(power);
+        max_sum = std::max(max_sum, sum);
+      }
+    }
+    return std::to_string(max_sum);
+  }
+};
+
+class P057 : public Solution {
+  public:
+  std::string solve() override {
+    int ans = 0; 
+    mpz_class h0 = 0, k0 = 1, h1 = 1, k1 = 0;
+    for (int a : std::views::take(sqrt_2_coefs(), 1000)) {
+      mpz_class hn = a * h1 + h0;
+      mpz_class kn = a * k1 + k0;
+      if (euler::to_string(hn).size() > euler::to_string(kn).size()) {
+        ans++;
+      }
+      h0 = h1;
+      k0 = k1;
+      h1 = hn;
+      k1 = kn;
+    }
+    return std::to_string(ans);
+  }
+  private:
+  std::generator<int> sqrt_2_coefs() {
+    co_yield 1;
+    while (true) {
+      co_yield 2;
+    }
+  }
+};
+
+class P058 : public Solution {
+  public:
+  std::string solve() override {
+    long long n = 0, p = 0;
+    while (true) {
+        ++n;
+        p += prime_diagonal(n);
+        if (p * 10 <= 1 + 4 * n) {
+            return std::to_string(2 * n + 1);
+        }
+    }
+    std::unreachable();
+  }
+  private:
+  std::array<long long, 4> diag(long long n) {
+    std::array<long long, 4> a;
+    long long corner = (2 * n + 1) * (2 * n + 1);
+    for (int i = 0; i < 4; i++) {
+      a[i] = corner - 2 * i * n;
+    }
+    return a;
+  }
+
+  int prime_diagonal(long long n) {
+    auto d = diag(n);
+    int ans = 0;
+    for (auto v : d) {
+      if (is_prime_mr(v)) {
+        ans++;
+      }
+    }
+    return ans;
+  }  
 };
 
 int main() {
@@ -1755,6 +1565,10 @@ int main() {
     std::make_shared<P052>(),
     std::make_shared<P053>(),
     std::make_shared<P054>(),
+    std::make_shared<P055>(),
+    std::make_shared<P056>(),
+    std::make_shared<P057>(),
+    std::make_shared<P058>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());
