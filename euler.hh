@@ -144,15 +144,6 @@ std::generator<std::array<T, SIZE>> window_generator(std::generator<T> gen) {
 }
 
 template <typename T>
-std::vector<T> fill_vector(std::generator<T> gen) {
-  std::vector<T> vec;
-  for (auto it = gen.begin(); it != gen.end(); ++it) {
-    vec.push_back(*it);
-  }
-  return vec;
-}
-
-template <typename T>
 std::generator<T> parse_numbers(const std::string& grid) {
   std::istringstream iss(grid);
   T value;

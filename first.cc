@@ -158,7 +158,8 @@ class P010 : public Solution {
 class P011 : public Solution {
  public:
   std::string solve() override {
-    std::vector<int> numbers = euler::fill_vector(euler::parse_numbers<int>(p011_input));
+    std::vector<int> numbers =
+        euler::parse_numbers<int>(p011_input) | std::ranges::to<std::vector<int>>();
     int best = 0;
     for (auto [dy, dx] : directions) {
       for (int y = 0; y < 20; y++) {
@@ -190,19 +191,17 @@ class P011 : public Solution {
 class P012 : public Solution {
  public:
   std::string solve() override {
-    for (int t : euler::triangular_generator()) {
-      if (euler::num_of_divisors(t) > 500) {
-        return std::to_string(t);
-      }
-    }
-    std::unreachable();
+    auto stream = euler::triangular_generator() |
+                  std::views::drop_while([](int t) { return euler::num_of_divisors(t) <= 500; });
+    return std::to_string(*std::ranges::begin(stream));
   }
 };
 
 class P013 : public Solution {
  public:
   std::string solve() override {
-    auto numbers = euler::fill_vector<mpz_class>(euler::parse_numbers<mpz_class>(p013_input));
+    auto numbers =
+        euler::parse_numbers<mpz_class>(p013_input) | std::ranges::to<std::vector<mpz_class>>();
     mpz_class sum = std::accumulate(numbers.begin(), numbers.end(), mpz_class(0));
     std::ostringstream oss;
     oss << sum;
@@ -260,7 +259,7 @@ class P016 : public Solution {
  public:
   std::string solve() override {
     mpz_class power = mpz_class{1} << 1000;
-    auto digits = euler::fill_vector(euler::digit_generator(power.get_str()));
+    auto digits = euler::digit_generator(power.get_str()) | std::ranges::to<std::vector<int>>();
     int sum = std::accumulate(digits.begin(), digits.end(), 0);
     return std::to_string(sum);
   }
@@ -374,7 +373,7 @@ class P020 : public Solution {
     for (int i = 1; i <= 100; i++) {
       factorial *= i;
     }
-    auto digits = euler::fill_vector(euler::digit_generator(factorial.get_str()));
+    auto digits = euler::digit_generator(factorial.get_str()) | std::ranges::to<std::vector<int>>();
     int sum = std::accumulate(digits.begin(), digits.end(), 0);
     return std::to_string(sum);
   }
@@ -384,14 +383,12 @@ class P021 : public Solution {
  public:
   P021(const std::vector<int>& divisor_sums) : divisor_sums(divisor_sums) {}
   std::string solve() override {
-    int ans = 0;
-    for (int i = 1; i < 10'000; i++) {
-      int sum = divisor_sums[i] - i;
-      if (sum > i && sum < 10'000 && divisor_sums[sum] - sum == i) {
-        ans += i + sum;
-      }
-    }
-    return std::to_string(ans);
+    auto stream = std::views::iota(1, 10'000) | std::views::filter([&](int i) {
+                    int sum = divisor_sums[i] - i;
+                    return sum > i && sum < 10'000 && divisor_sums[sum] - sum == i;
+                  }) |
+                  std::views::transform([&](int i) { return divisor_sums[i]; });
+    return std::to_string(std::accumulate(stream.begin(), stream.end(), 0));
   }
 
  private:
@@ -403,11 +400,10 @@ class P022 : public Solution {
   std::string solve() override {
     auto names = p022_input;
     std::sort(names.begin(), names.end());
-    long long ans = 0;
-    for (size_t i = 0; i < names.size(); i++) {
-      ans += (i + 1) * name_score(names[i]);
-    }
-    return std::to_string(ans);
+    auto stream = std::views::zip_transform(
+        [&](auto i, auto name) -> long long { return this->name_score(name) * (i + 1); },
+        std::views::iota(0), names);
+    return std::to_string(std::ranges::fold_left(stream, 0LL, std::plus<long long>()));
   }
 
  private:
@@ -1486,10 +1482,12 @@ class P058 : public Solution {
 };
 
 int main() {
-  const std::vector<int> primes = euler::fill_vector(euler::sieve_generator(2'000'000));
+  const std::vector<int> primes =
+      euler::sieve_generator(2'000'000) | std::ranges::to<std::vector<int>>();
   const std::unordered_set<int> prime_set(primes.begin(), primes.end());
   const std::vector<int> divisor_sums =
-      euler::fill_vector(euler::sum_of_divisors_generator(28'123));
+      euler::sum_of_divisors_generator(28'123) | std::ranges::to<std::vector<int>>();
+
   std::vector<std::shared_ptr<Solution>> solutions = {
       std::make_shared<P001>(),
       std::make_shared<P002>(),
