@@ -26,6 +26,8 @@
 
 #include "euler.hh"
 #include "first_input.hh"
+#include "poker.hh"
+#include "spelling.hh"
 
 class Solution {
  public:
@@ -205,9 +207,7 @@ class P013 : public Solution {
     auto numbers =
         euler::parse_numbers<mpz_class>(p013_input) | std::ranges::to<std::vector<mpz_class>>();
     mpz_class sum = std::accumulate(numbers.begin(), numbers.end(), mpz_class(0));
-    std::ostringstream oss;
-    oss << sum;
-    return oss.str().substr(0, 10);
+    return sum.get_str().substr(0, 10);
   }
 };
 
@@ -272,7 +272,7 @@ class P017 : public Solution {
   std::string solve() override {
     int ans = 0;
     for (int i = 1; i <= 1000; i++) {
-      ans += count_letters(to_number(i));
+      ans += count_letters(euler_spelling::to_number(i));
     }
     return std::to_string(ans);
   }
@@ -281,39 +281,6 @@ class P017 : public Solution {
   int count_letters(std::string number) {
     return std::count_if(number.begin(), number.end(), [](char c) { return std::isalpha(c); });
   }
-  std::string to_number(int n) {
-    if (n == 1000) {
-      return "one thousand";
-    }
-    if (n <= 20) {
-      return std::string{ones[n - 1]};
-    }
-    if (n < 100) {
-      int t = n / 10;
-      int r = n % 10;
-      std::string result{tens_names[t]};
-      if (r > 0) {
-        result += '-';
-        result += ones[r - 1];
-      }
-      return result;
-    }
-    std::string result{ones[n / 100 - 1]};
-    result += " hundred";
-    if (n % 100 > 0) {
-      result += " and ";
-      result += to_number(n % 100);
-    }
-    return result;
-  }
-
-  const std::array<std::string_view, 20> ones = {
-      "one",     "two",     "three",     "four",     "five",     "six",      "seven",
-      "eight",   "nine",    "ten",       "eleven",   "twelve",   "thirteen", "fourteen",
-      "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"};
-
-  const std::array<std::string_view, 10> tens_names = {
-      "", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"};
 };
 
 class P018 : public Solution {
@@ -507,7 +474,7 @@ class P026 : public Solution {
 class P027 : public Solution {
  public:
   P027(const std::vector<int>& primes)
-      : primes(primes | std::ranges::views::filter([](int p) { return p < 1000; }) |
+      : primes(primes | std::views::take_while([](int p) { return p < 1000; }) |
                std::ranges::to<std::unordered_set<int>>()) {}
   std::string solve() override {
     int best_a = 0, best_b = 0, best_count = 0;
@@ -732,8 +699,6 @@ class P036 : public Solution {
     }
     return std::to_string(ans);
   }
-
- private:
 };
 
 class P037 : public Solution {
@@ -1002,9 +967,8 @@ class P048 : public Solution {
     for (mpz_class i = 1; i <= 1000; i++) {
       ans += euler::modpow(i, i, digits);
     }
-    std::ostringstream oss;
-    oss << ans % digits;
-    return oss.str();
+    ans %= digits;
+    return ans.get_str();
   }
 };
 
@@ -1168,7 +1132,7 @@ class P053 : public Solution {
 class P054 : public Solution {
  public:
   std::string solve() override {
-    std::vector<std::pair<Hand, Hand>> hands;
+    std::vector<std::pair<euler_poker::Hand, euler_poker::Hand>> hands;
     std::istringstream infile(p054_input);
     std::string line;
     while (std::getline(infile, line)) {
@@ -1177,206 +1141,14 @@ class P054 : public Solution {
       std::string token;
       while (iss >> token) s.push_back(token);
       if (s.size() != 10) continue;
-      hands.emplace_back(parse_hand({s[0], s[1], s[2], s[3], s[4]}),
-                         parse_hand({s[5], s[6], s[7], s[8], s[9]}));
+      hands.emplace_back(euler_poker::parse_hand({s[0], s[1], s[2], s[3], s[4]}),
+                         euler_poker::parse_hand({s[5], s[6], s[7], s[8], s[9]}));
     }
     int p1wins = 0;
     for (const auto& [p1, p2] : hands) {
-      if (winner(p1, p2) == 1) ++p1wins;
+      if (euler_poker::winner(p1, p2) == 1) ++p1wins;
     }
     return std::to_string(p1wins);
-  }
-
- private:
-  using Card = std::pair<int, char>;
-  using Hand = std::vector<Card>;
-  using ScoreResult = std::pair<bool, std::vector<int>>;
-  using ScoreFunc = std::function<ScoreResult(const Hand&)>;
-  using ScorePair = std::pair<std::string, ScoreFunc>;
-  using ScoreInfo = std::tuple<int, std::string, std::vector<int>>;
-
-  const std::map<char, int> values = {{'2', 2},  {'3', 3},  {'4', 4}, {'5', 5},  {'6', 6},
-                                      {'7', 7},  {'8', 8},  {'9', 9}, {'T', 10}, {'J', 11},
-                                      {'Q', 12}, {'K', 13}, {'A', 14}};
-
-  Hand parse_hand(const std::vector<std::string>& cards) {
-    Hand hand;
-    for (const auto& cs : cards) {
-      char rank = cs[0];
-      char suit = cs[1];
-      hand.emplace_back(values.at(rank), suit);
-    }
-    std::sort(hand.begin(), hand.end());
-    return hand;
-  }
-
-  std::vector<int> discarded(const Hand& hand, const std::vector<int>& skips) {
-    std::vector<int> result = skips;
-    for (auto it = hand.rbegin(); it != hand.rend(); ++it) {
-      int rank = it->first;
-      if (std::find(skips.begin(), skips.end(), rank) == skips.end()) {
-        result.push_back(rank);
-      }
-    }
-    return result;
-  }
-
-  ScoreResult high_card(const Hand& hand) { return {true, discarded(hand, {})}; }
-
-  std::map<int, int> count_ranks(const Hand& hand) {
-    std::map<int, int> c;
-    for (const auto& [rank, suit] : hand) {
-      c[rank]++;
-    }
-    return c;
-  }
-
-  std::map<char, int> count_suits(const Hand& hand) {
-    std::map<char, int> c;
-    for (const auto& [rank, suit] : hand) {
-      c[suit]++;
-    }
-    return c;
-  }
-
-  template <typename T>
-  int max_rank(const T& c) {
-    return std::max_element(c.begin(), c.end(),
-                            [](auto& a, auto& b) { return a.second < b.second; })
-        ->second;
-  }
-
-  ScoreResult one_pair(const Hand& hand) {
-    auto c = count_ranks(hand);
-    if (max_rank(c) != 2) {
-      return {false, {}};
-    }
-    std::vector<int> ranks;
-    for (auto& [k, v] : c) {
-      if (v == 2) {
-        ranks.push_back(k);
-      }
-    }
-    if (ranks.size() > 1) {
-      return {false, {}};
-    }
-    return {true, discarded(hand, {ranks[0]})};
-  }
-
-  ScoreResult two_pairs(const Hand& hand) {
-    auto c = count_ranks(hand);
-    if (max_rank(c) != 2) return {false, {}};
-    std::vector<int> ranks;
-    for (auto& [k, v] : c)
-      if (v == 2) ranks.push_back(k);
-    if (ranks.size() != 2) return {false, {}};
-    int r1 = std::max(ranks[0], ranks[1]);
-    int r2 = std::min(ranks[0], ranks[1]);
-    return {true, discarded(hand, {r1, r2})};
-  }
-
-  ScoreResult three_of_a_kind(const Hand& hand) {
-    auto c = count_ranks(hand);
-    if (max_rank(c) != 3) return {false, {}};
-    if (std::any_of(c.begin(), c.end(), [](auto& p) { return p.second == 2; })) return {false, {}};
-    std::vector<int> ranks;
-    for (auto& [k, v] : c)
-      if (v == 3) ranks.push_back(k);
-    return {true, discarded(hand, ranks)};
-  }
-
-  ScoreResult full_house(const Hand& hand) {
-    auto c = count_ranks(hand);
-    bool has3 = std::any_of(c.begin(), c.end(), [](auto& p) { return p.second == 3; });
-    bool has2 = std::any_of(c.begin(), c.end(), [](auto& p) { return p.second == 2; });
-    if (!has3 || !has2) return {false, {}};
-    int big = 0, small = 0;
-    for (auto& [k, v] : c)
-      if (v == 3) big = k;
-    for (auto& [k, v] : c)
-      if (v == 2) small = k;
-    return {true, discarded(hand, {big, small})};
-  }
-
-  bool consecutive(const Hand& hand) {
-    for (size_t i = 1; i < hand.size(); ++i)
-      if (hand[i].first != hand[i - 1].first + 1) return false;
-    return true;
-  }
-
-  ScoreResult straight(const Hand& hand) {
-    if (!consecutive(hand)) return {false, {}};
-    std::vector<int> r;
-    for (auto it = hand.rbegin(); it != hand.rend(); ++it) r.push_back(it->first);
-    return {true, r};
-  }
-
-  ScoreResult flush(const Hand& hand) {
-    auto c = count_suits(hand);
-    if (max_rank(c) != 5) return {false, {}};
-    std::vector<int> r;
-    for (auto it = hand.rbegin(); it != hand.rend(); ++it) r.push_back(it->first);
-    return {true, r};
-  }
-
-  ScoreResult straight_flush(const Hand& hand) {
-    auto s = straight(hand);
-    if (!s.first) return {false, {}};
-    auto f = flush(hand);
-    if (!f.first) return {false, {}};
-    return s;
-  }
-
-  ScoreResult royal_flush(const Hand& hand) {
-    if (!consecutive(hand)) return {false, {}};
-    auto c_suit = count_suits(hand);
-    if (max_rank(c_suit) != 5) return {false, {}};
-    if (hand[0].first != 10) return {false, {}};
-    std::vector<int> r;
-    for (auto it = hand.rbegin(); it != hand.rend(); ++it) r.push_back(it->first);
-    return {true, r};
-  }
-
-  ScoreResult four_of_a_kind(const Hand& hand) {
-    auto c = count_ranks(hand);
-    if (max_rank(c) != 4) return {false, {}};
-    std::vector<int> ranks;
-    for (auto& [k, v] : c)
-      if (v == 4) ranks.push_back(k);
-    return {true, discarded(hand, ranks)};
-  }
-
-  const std::vector<ScorePair> scores = {
-      {"royal_flush", [&](const Hand& hand) { return royal_flush(hand); }},
-      {"straight_flush", [&](const Hand& hand) { return straight_flush(hand); }},
-      {"four_of_a_kind", [&](const Hand& hand) { return four_of_a_kind(hand); }},
-      {"full_house", [&](const Hand& hand) { return full_house(hand); }},
-      {"flush", [&](const Hand& hand) { return flush(hand); }},
-      {"straight", [&](const Hand& hand) { return straight(hand); }},
-      {"three_of_a_kind", [&](const Hand& hand) { return three_of_a_kind(hand); }},
-      {"two_pairs", [&](const Hand& hand) { return two_pairs(hand); }},
-      {"one_pair", [&](const Hand& hand) { return one_pair(hand); }},
-      {"high_card", [&](const Hand& hand) { return high_card(hand); }},
-  };
-
-  ScoreInfo best_score(const Hand& hand) {
-    for (size_t i = 0; i < scores.size(); ++i) {
-      const auto& [name, func] = scores[i];
-      auto [res, val] = func(hand);
-      if (res) {
-        return {static_cast<int>(scores.size() - i), name, val};
-      }
-    }
-    return {0, "none", {}};
-  }
-
-  int winner(const Hand& p1, const Hand& p2) {
-    auto [s1, n1, v1] = best_score(p1);
-    auto [s2, n2, v2] = best_score(p2);
-    if (std::tie(s1, v1) > std::tie(s2, v2))
-      return 1;
-    else
-      return 2;
   }
 };
 
@@ -1608,6 +1380,44 @@ class P061 : public Solution {
   }
 };
 
+class P062 : public Solution {
+ public:
+  std::string solve() override {
+    std::unordered_map<std::string, std::vector<long long>> cubes;
+    for (auto cube : gen_cubes()) {
+      std::string key = std::to_string(cube);
+      sort(key.begin(), key.end());
+      cubes[key].push_back(cube);
+      if (cubes[key].size() == 5) {
+        return std::to_string(cubes[key][0]);
+      }
+    }
+    std::unreachable();
+  }
+
+ private:
+  std::generator<long long> gen_cubes() {
+    for (auto i : std::views::iota(1LL)) {
+      co_yield i* i* i;
+    }
+  }
+};
+
+class P063 : public Solution {
+ public:
+  std::string solve() override {
+    int count = 0;
+    for (mpz_class n = 1; n <= 9; n++) {
+      for (mpz_class d = 1; d <= 21; d++) {
+        if (euler::ipow(n, d).get_str().size() == d) {
+          count++;
+        }
+      }
+    }
+    return std::to_string(count);
+  }
+};
+
 int main() {
   const std::vector<int> primes =
       euler::sieve_generator(2'000'000) | std::ranges::to<std::vector<int>>();
@@ -1677,6 +1487,8 @@ int main() {
       std::make_shared<P059>(),
       std::make_shared<P060>(primes),
       std::make_shared<P061>(),
+      std::make_shared<P062>(),
+      std::make_shared<P063>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());
