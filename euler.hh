@@ -349,13 +349,13 @@ bool is_triangular(T n) {
   return x * (x + 1) / 2 == n;
 }
 
+long long square(long long n) { return n * n; }
+
 long long triangular(long long n) { return n * (n + 1) / 2; }
 
 long long pentagonal(long long n) { return n * (3 * n - 1) / 2; }
 
 long long hexagonal(long long n) { return n * (2 * n - 1); }
-
-long long square(long long n) { return n * n; }
 
 long long heptagonal(long long n) { return n * (5 * n - 3) / 2; }
 
@@ -468,6 +468,20 @@ std::tuple<T, T, T> line_from_two_points(T x0, T y0, T x1, T y1) {
   }
 
   return {a, b, c};
+}
+
+std::generator<std::pair<mpz_class, mpz_class>> convergents(std::generator<int> coefs) {
+  mpz_class h0 = 0, k0 = 1;
+  mpz_class h1 = 1, k1 = 0;
+  for (int a : coefs) {
+    mpz_class hn = a * h1 + h0;
+    mpz_class kn = a * k1 + k0;
+    co_yield {hn, kn};
+    h0 = h1;
+    k0 = k1;
+    h1 = hn;
+    k1 = kn;
+  }
 }
 
 }  // namespace euler

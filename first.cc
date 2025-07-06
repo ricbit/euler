@@ -474,7 +474,7 @@ class P026 : public Solution {
 class P027 : public Solution {
  public:
   P027(const std::vector<int>& primes)
-      : primes(primes | std::views::take_while([](int p) { return p < 1000; }) |
+      : primes(primes | std::views::filter([](int p) { return p < 1000; }) |
                std::ranges::to<std::unordered_set<int>>()) {}
   std::string solve() override {
     int best_a = 0, best_b = 0, best_count = 0;
@@ -1195,17 +1195,10 @@ class P057 : public Solution {
  public:
   std::string solve() override {
     int ans = 0;
-    mpz_class h0 = 0, k0 = 1, h1 = 1, k1 = 0;
-    for (int a : std::views::take(sqrt_2_coefs(), 1000)) {
-      mpz_class hn = a * h1 + h0;
-      mpz_class kn = a * k1 + k0;
+    for (auto [hn, kn] : std::views::take(euler::convergents(sqrt_2_coefs()), 1000)) {
       if (euler::to_string(hn).size() > euler::to_string(kn).size()) {
         ans++;
       }
-      h0 = h1;
-      k0 = k1;
-      h1 = hn;
-      k1 = kn;
     }
     return std::to_string(ans);
   }
@@ -1418,6 +1411,53 @@ class P063 : public Solution {
   }
 };
 
+class P064 : public Solution {
+ public:
+  std::string solve() override {
+    int count = 0;
+    for (int n = 1; n <= 10000; n++) {
+      if (period(n) % 2 == 1) {
+        count++;
+      }
+    }
+    return std::to_string(count);
+  }
+
+ private:
+  int period(int n) {
+    int a0 = static_cast<int>(std::floor(std::sqrt(n)));
+    if (a0 * a0 == n) {
+      return 0;
+    }
+    int m = 0, d = 1, a = a0, p = 0;
+    do {
+      m = d * a - m;
+      d = (n - m * m) / d;
+      a = (a0 + m) / d;
+      p++;
+    } while (a != 2 * a0);
+    return p;
+  }
+};
+
+class P065 : public Solution {
+ public:
+  std::string solve() override {
+    auto [num, den] = *std::views::drop(euler::convergents(euler_e_coefs()), 99).begin();
+    return std::to_string(euler::digit_sum(num));
+  }
+
+ private:
+  std::generator<int> euler_e_coefs() {
+    co_yield 2;
+    for (int i : std::views::iota(1)) {
+      co_yield 1;
+      co_yield 2 * i;
+      co_yield 1;
+    }
+  }
+};
+
 int main() {
   const std::vector<int> primes =
       euler::sieve_generator(2'000'000) | std::ranges::to<std::vector<int>>();
@@ -1489,6 +1529,8 @@ int main() {
       std::make_shared<P061>(),
       std::make_shared<P062>(),
       std::make_shared<P063>(),
+      std::make_shared<P064>(),
+      std::make_shared<P065>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());
@@ -1503,7 +1545,7 @@ int main() {
                  });
 
   for (int i = 1; auto& r : results) {
-    std::cout << i++ << "\t" << r.second << "ms\t" << r.first << "\n";
+    std::cout << i++ << "\t" << r.second << "ms\t" /*<< r.first*/ << "\n";
   }
   return 0;
 }
