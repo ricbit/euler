@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <generator>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -27,6 +28,22 @@ std::generator<T> factor_integer(T n) {
       n /= factor;
     }
     factor++;
+  }
+  if (n > 1) {
+    co_yield n;
+  }
+}
+
+template <typename T>
+std::generator<T> factor_integer(T n, const std::vector<int>& primes) {
+  size_t index = 0;
+  T limit = static_cast<T>(sqrt(n));
+  while (index < primes.size() && primes[index] <= limit) {
+    while (n % primes[index] == 0) {
+      co_yield primes[index];
+      n /= primes[index];
+    }
+    index++;
   }
   if (n > 1) {
     co_yield n;
@@ -144,8 +161,8 @@ std::generator<std::array<T, SIZE>> window_generator(std::generator<T> gen) {
 }
 
 template <typename T>
-std::generator<T> parse_numbers(const std::string& grid) {
-  std::istringstream iss(grid);
+std::generator<T> parse_numbers(const std::string& number_list) {
+  std::istringstream iss(number_list);
   T value;
   while (iss >> value) {
     co_yield value;
@@ -164,6 +181,24 @@ std::generator<int> triangular_generator() {
 std::generator<std::pair<int, int>> group_factor_integer(int n) {
   int count = 0, last = 0;
   for (auto p : factor_integer(n)) {
+    if (p != last) {
+      if (last == 0) {
+        count = 1;
+      } else {
+        co_yield {last, count};
+        count = 1;
+      }
+      last = p;
+    } else {
+      count++;
+    }
+  }
+  co_yield {last, count};
+}
+
+std::generator<std::pair<int, int>> group_factor_integer(int n, const std::vector<int>& primes) {
+  int count = 0, last = 0;
+  for (auto p : factor_integer(n, primes)) {
     if (p != last) {
       if (last == 0) {
         count = 1;
@@ -210,6 +245,12 @@ T binomial(int n, int k) {
     result /= i + 1;
   }
   return result;
+}
+
+mpz_class isqrt(const mpz_class& n) {
+  mpz_class r;
+  mpz_sqrt(r.get_mpz_t(), n.get_mpz_t());
+  return r;
 }
 
 template <typename T>
@@ -314,6 +355,12 @@ long long pentagonal(long long n) { return n * (3 * n - 1) / 2; }
 
 long long hexagonal(long long n) { return n * (2 * n - 1); }
 
+long long square(long long n) { return n * n; }
+
+long long heptagonal(long long n) { return n * (5 * n - 3) / 2; }
+
+long long octagonal(long long n) { return n * (3 * n - 2); }
+
 bool is_pentagonal(long long n) {
   long long d = 24 * n + 1;
   long long x = static_cast<long long>(sqrt(d));
@@ -399,6 +446,28 @@ bool is_prime_mr(long long n) {
     if (miller_rabin(n, a, s, d)) return false;  // composite
   }
   return true;  // prime
+}
+
+template <typename T>
+std::tuple<T, T, T> line_from_two_points(T x0, T y0, T x1, T y1) {
+  T a = y0 - y1;
+  T b = x1 - x0;
+  T c = x1 * y0 - x0 * y1;
+
+  if (b < 0 || (b == 0 && a < 0)) {
+    a = -a;
+    b = -b;
+    c = -c;
+  }
+
+  long long g = euler::gcd(euler::gcd(std::llabs(a), std::llabs(b)), std::llabs(c));
+  if (g > 1) {
+    a /= g;
+    b /= g;
+    c /= g;
+  }
+
+  return {a, b, c};
 }
 
 }  // namespace euler

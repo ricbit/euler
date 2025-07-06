@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bitset>
 #include <chrono>
 #include <cmath>
 #include <execution>
@@ -18,6 +19,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -1481,6 +1483,131 @@ class P058 : public Solution {
   }
 };
 
+class P059 : public Solution {
+ public:
+  std::string solve() override {
+    auto text = std::views::split(p059_input, ',') | std::views::transform([](auto number) {
+                  std::string s;
+                  for (char x : number) s += x;
+                  return std::stoi(s);
+                }) |
+                std::ranges::to<std::vector<int>>();
+    for (char k1 = 'a'; k1 <= 'z'; k1++) {
+      for (char k2 = 'a'; k2 <= 'z'; k2++) {
+        for (char k3 = 'a'; k3 <= 'z'; k3++) {
+          std::string key = {k1, k2, k3};
+          std::string decrypted;
+          for (size_t i = 0; i < text.size(); i++) {
+            decrypted += static_cast<char>(text[i] ^ key[i % 3]);
+          }
+          if (decrypted.find(" the ") != std::string::npos) {
+            int sum = std::accumulate(decrypted.begin(), decrypted.end(), 0);
+            return std::to_string(sum);
+          }
+        }
+      }
+    }
+    std::unreachable();
+  }
+};
+
+class P060 : public Solution {
+ public:
+  P060(const std::vector<int>& primes) : primes(primes) {}
+  std::string solve() override {
+    auto small_primes = primes | std::views::take_while([](int p) { return p < 10000; }) |
+                        std::ranges::to<std::vector<int>>();
+    pairs.resize(1500);
+    for (size_t i = 0; i < small_primes.size(); i++) {
+      pairs[i].set(i);
+      for (size_t j = i + 1; j < small_primes.size(); j++) {
+        int p1 = small_primes[i];
+        int p2 = small_primes[j];
+        if (is_prime_pair(p1, p2)) {
+          pairs[i].set(j);
+          pairs[j].set(i);
+        }
+      }
+    }
+    mask_t mask;
+    mask.set();
+    return search(0, 0, 0, mask);
+  }
+
+ private:
+  using mask_t = std::bitset<1500>;
+  std::string search(int start, int size, int current, mask_t mask) {
+    if (size == 5) {
+      return std::to_string(current);
+    }
+    for (size_t i = start; i < pairs.size(); i++) {
+      if ((mask & pairs[i]).count() >= 5) {
+        auto ans = search(i + 1, size + 1, current + primes[i], mask & pairs[i]);
+        if (!ans.empty()) {
+          return ans;
+        }
+      }
+    }
+    return "";
+  }
+  bool is_prime_pair(int p1, int p2) {
+    std::string s1 = std::to_string(p1);
+    std::string s2 = std::to_string(p2);
+    return euler::is_prime_mr(std::stoll(s1 + s2)) && euler::is_prime_mr(std::stoll(s2 + s1));
+  }
+  const std::vector<int>& primes;
+  std::vector<mask_t> pairs;
+};
+
+class P061 : public Solution {
+ public:
+  std::string solve() override {
+    auto seq = std::ranges::transform_view(
+                   figurates, [this](auto figurate) { return four_digits(figurate); }) |
+               std::ranges::to<std::vector<prefix_t>>();
+    for (auto& [prefix, values] : seq[5]) {
+      for (auto value : values) {
+        if (int ans = search(seq, value, 1 << 5, value, value)) {
+          return std::to_string(ans);
+        }
+      }
+    }
+    std::unreachable();
+  }
+
+ private:
+  using prefix_t = std::unordered_map<int, std::unordered_set<int>>;
+  int search(auto& seq, int start, int mask, int current, int first) {
+    if (mask == 0x3F) {
+      return start % 100 == first / 100 ? current : 0;
+    }
+    for (int i = 0; i < 6; i++) {
+      if ((mask & (1 << i)) == 0) {
+        if (!seq[i][start % 100].empty()) {
+          for (auto value : seq[i][start % 100]) {
+            if (int ans = search(seq, value, mask | (1 << i), current + value, first)) {
+              return ans;
+            }
+          }
+        }
+      }
+    }
+    return 0;
+  }
+  static auto constexpr figurates = {euler::square,    euler::triangular, euler::pentagonal,
+                                     euler::hexagonal, euler::heptagonal, euler::octagonal};
+  prefix_t four_digits(auto figurate) {
+    auto figurate_gen = std::views::iota(0) | std::views::transform(figurate) |
+                        std::views::drop_while([](int n) { return n < 1000; }) |
+                        std::views::take_while([](int n) { return n < 10000; });
+    prefix_t prefix;
+    for (auto n : figurate_gen) {
+      prefix[n / 100].insert(n);
+    }
+    return prefix;
+  }
+};
+
 int main() {
   const std::vector<int> primes =
       euler::sieve_generator(2'000'000) | std::ranges::to<std::vector<int>>();
@@ -1547,6 +1674,9 @@ int main() {
       std::make_shared<P056>(),
       std::make_shared<P057>(),
       std::make_shared<P058>(),
+      std::make_shared<P059>(),
+      std::make_shared<P060>(primes),
+      std::make_shared<P061>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());
