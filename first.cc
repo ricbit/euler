@@ -286,7 +286,7 @@ class P017 : public Solution {
 class P018 : public Solution {
  public:
   std::string solve() override {
-    auto grid = parse_triangle(p018_input);
+    auto grid = euler::parse_triangle(p018_input);
     std::vector<std::vector<int>> ans(grid.size(), std::vector<int>(grid.size(), 0));
     int n = grid.size();
     for (int i = 0; i < n; i++) {
@@ -298,23 +298,6 @@ class P018 : public Solution {
       }
     }
     return std::to_string(ans[0][0]);
-  }
-
- private:
-  std::vector<std::vector<int>> parse_triangle(const std::string& source) {
-    std::vector<std::vector<int>> triangle;
-    for (size_t line = 0, i = 0; auto value : euler::parse_numbers<int>(source)) {
-      if (line >= triangle.size()) {
-        triangle.emplace_back();
-      }
-      triangle[line].push_back(value);
-      i++;
-      if (i == line + 1) {
-        line++;
-        i = 0;
-      }
-    }
-    return triangle;
   }
 };
 
@@ -1458,6 +1441,95 @@ class P065 : public Solution {
   }
 };
 
+class P066 : public Solution {
+ public:
+  std::string solve() override {
+    mpz_class best_x = 0;
+    int best_index = 0;
+    for (int n : std::views::iota(2, 1001)) {
+      if (!euler::is_square(n)) {
+        auto [num, den] = euler::pell(n);
+        if (num > best_x) {
+          best_x = num;
+          best_index = n;
+        }
+      }
+    }
+    return std::to_string(best_index);
+  }
+};
+
+class P067 : public Solution {
+ public:
+  std::string solve() override {
+    auto grid = euler::parse_triangle(p067_input);
+    std::vector<std::vector<int>> ans(grid.size(), std::vector<int>(grid.size(), 0));
+    int n = grid.size();
+    for (int i = 0; i < n; i++) {
+      ans[n - 1][i] = grid[n - 1][i];
+    }
+    for (int j = n - 2; j >= 0; j--) {
+      for (int i = 0; i <= j; i++) {
+        ans[j][i] = grid[j][i] + std::max(ans[j + 1][i], ans[j + 1][i + 1]);
+      }
+    }
+    return std::to_string(ans[0][0]);
+  }
+};
+
+class P068 : public Solution {
+ public:
+  std::string solve() override {
+    auto p = std::views::iota(1, 11) | std::ranges::to<std::vector<int>>();
+    std::string best;
+
+    do {
+      if (is_valid(p)) {
+        std::string u = unique_str(p);
+        if (u.size() == 16 and u > best) {
+          best = u;
+        }
+      }
+    } while (std::next_permutation(p.begin(), p.end()));
+    return best;
+  }
+
+ private:
+  bool is_valid(const std::vector<int>& p) {
+    int target = get_sum(p, ring[0]);
+    for (const auto& r : ring) {
+      if (get_sum(p, r) != target) {
+        return false;
+      }
+    }
+    return true;
+  }
+  static constexpr std::array<std::array<int, 3>, 5> ring = {
+      std::array{1, 2, 3}, std::array{4, 3, 5}, std::array{6, 5, 7}, std::array{8, 7, 9},
+      std::array{10, 9, 2}};
+
+  int get_sum(const std::vector<int>& p, const std::array<int, 3>& r) {
+    auto stream = r | std::views::transform([&p](int x) { return p[x - 1]; });
+    return std::ranges::fold_left(stream, 0, std::plus<int>());
+  }
+
+  std::string get_string(const std::vector<int>& p, const std::array<int, 3>& r) {
+    auto stream = r | std::views::transform([&p](int x) { return std::to_string(p[x - 1]); });
+    return std::ranges::fold_left(stream, "", std::plus<std::string>());
+  }
+
+  std::string unique_str(const std::vector<int>& p) {
+    auto externals = ring | std::views::transform([&p](const auto& r) { return p[r[0] - 1]; }) |
+                     std::ranges::to<std::vector<int>>();
+    auto parts = ring | std::views::transform([&](const auto& r) { return get_string(p, r); }) |
+                 std::ranges::to<std::vector<std::string>>();
+    int start = std::ranges::distance(externals.begin(), std::ranges::min_element(externals));
+    auto stream = std::views::iota(0, 5) |
+                  std::views::transform([&](int j) { return parts[(start + j) % 5]; });
+    return std::ranges::fold_left(stream, "", std::plus<std::string>());
+  }
+};
+
 int main() {
   const std::vector<int> primes =
       euler::sieve_generator(2'000'000) | std::ranges::to<std::vector<int>>();
@@ -1531,6 +1603,9 @@ int main() {
       std::make_shared<P063>(),
       std::make_shared<P064>(),
       std::make_shared<P065>(),
+      std::make_shared<P066>(),
+      std::make_shared<P067>(),
+      std::make_shared<P068>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());
@@ -1545,7 +1620,7 @@ int main() {
                  });
 
   for (int i = 1; auto& r : results) {
-    std::cout << i++ << "\t" << r.second << "ms\t" /*<< r.first*/ << "\n";
+    std::cout << i++ << "\t" << r.second << "ms\t" << r.first << "\n";
   }
   return 0;
 }

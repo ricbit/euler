@@ -71,6 +71,11 @@ bool is_palindrome<std::string>(std::string n) {
   return n == std::string(n.crbegin(), n.crend());
 }
 
+bool is_square(long long n) {
+  long long root = static_cast<long long>(sqrt(n));
+  return root * root == n;
+}
+
 template <typename T>
 T gcd(T a, T b) {
   while (b != 0) {
@@ -482,6 +487,45 @@ std::generator<std::pair<mpz_class, mpz_class>> convergents(std::generator<int> 
     h1 = hn;
     k1 = kn;
   }
+}
+
+std::generator<int> sqrt_coefs(int n) {
+  int a0 = static_cast<int>(std::floor(std::sqrt(n)));
+  if (a0 * a0 == n) {
+    co_return;
+  }
+  int m = 0, d = 1, a = a0, p = 0;
+  do {
+    m = d * a - m;
+    d = (n - m * m) / d;
+    co_yield a;
+    a = (a0 + m) / d;
+    p++;
+  } while (true);
+}
+
+std::vector<std::vector<int>> parse_triangle(const std::string& source) {
+  std::vector<std::vector<int>> triangle;
+  for (size_t line = 0, i = 0; auto value : euler::parse_numbers<int>(source)) {
+    if (line >= triangle.size()) {
+      triangle.emplace_back();
+    }
+    triangle[line].push_back(value);
+    i++;
+    if (i == line + 1) {
+      line++;
+      i = 0;
+    }
+  }
+  return triangle;
+}
+std::pair<mpz_class, mpz_class> pell(int D) {
+  for (auto [num, den] : euler::convergents(euler::sqrt_coefs(D))) {
+    if (num * num - D * den * den == 1) {
+      return {num, den};
+    }
+  }
+  std::unreachable();
 }
 
 }  // namespace euler
