@@ -1187,7 +1187,7 @@ class P057 : public Solution {
   }
 
  private:
-  std::generator<int> sqrt_2_coefs() {
+  std::generator<long long> sqrt_2_coefs() {
     co_yield 1;
     while (true) {
       co_yield 2;
@@ -1408,7 +1408,7 @@ class P064 : public Solution {
 
  private:
   int period(int n) {
-    int a0 = static_cast<int>(std::floor(std::sqrt(n)));
+    int a0 = euler::isqrt(n);
     if (a0 * a0 == n) {
       return 0;
     }
@@ -1431,7 +1431,7 @@ class P065 : public Solution {
   }
 
  private:
-  std::generator<int> euler_e_coefs() {
+  std::generator<long long> euler_e_coefs() {
     co_yield 2;
     for (int i : std::views::iota(1)) {
       co_yield 1;
@@ -1448,7 +1448,7 @@ class P066 : public Solution {
     int best_index = 0;
     for (int n : std::views::iota(2, 1001)) {
       if (!euler::is_square(n)) {
-        auto [num, den] = euler::pell(n);
+        auto [num, den] = *euler::pell(n).begin();
         if (num > best_x) {
           best_x = num;
           best_index = n;
@@ -1530,9 +1530,337 @@ class P068 : public Solution {
   }
 };
 
+class P069 : public Solution {
+ public:
+  P069(const std::vector<int>& primes) : primes(primes) {}
+  std::string solve() override {
+    int ans = 1;
+    for (int i : std::views::iota(0)) {
+      int next = ans * primes[i];
+      if (next > 1'000'000) {
+        return std::to_string(ans);
+      }
+      ans = next;
+    }
+    std::unreachable();
+  }
+
+ private:
+  const std::vector<int>& primes;
+};
+
+class P070 : public Solution {
+ public:
+  P070(const std::vector<int>& primes) : primes(primes) {}
+  std::string solve() override {
+    double best = 2.0;
+    int best_index = 0;
+    int limit = sqrt(10'000'000);
+    int psize = primes.size();
+    for (int i = 0; primes[i] < limit; i++) {
+      for (int j = i + 1; j < psize && primes[i] * primes[j] < 10'000'000; j++) {
+        int n = primes[i] * primes[j];
+        int tot = (primes[i] - 1) * (primes[j] - 1);
+        double frac = static_cast<double>(n) / tot;
+        if (frac < best) {
+          auto n_str = std::to_string(n);
+          auto tot_str = std::to_string(tot);
+          if (std::ranges::is_permutation(n_str, tot_str)) {
+            best = frac;
+            best_index = n;
+          }
+        }
+      }
+    }
+    return std::to_string(best_index);
+  }
+
+ private:
+  const std::vector<int>& primes;
+};
+
+class P071 : public Solution {
+ public:
+  std::string solve() override {
+    long long goal_num = 3, goal_den = 7;
+    long long cur_num = 0, cur_den = 1;
+    for (long long i = 2; i < 1'000'000; i++) {
+      long long f_num = i * goal_num / goal_den, f_den = i;
+      long long g = euler::gcd(f_num, f_den);
+      f_num /= g;
+      f_den /= g;
+      if (smaller(f_num, f_den, goal_num, goal_den) && smaller(cur_num, cur_den, f_num, f_den)) {
+        cur_num = f_num;
+        cur_den = f_den;
+      }
+    }
+    return std::to_string(cur_num);
+  }
+
+ private:
+  bool smaller(long long a_num, long long a_den, long long b_num, long long b_den) {
+    return a_num * b_den < a_den * b_num;
+  }
+};
+
+class P072 : public Solution {
+ public:
+  P072(const std::vector<int>& primes) : primes(primes) {}
+  std::string solve() override {
+    std::vector<int> phi(1'000'001);
+    for (int p : primes | std::views::take_while([](int p) { return p <= 1'000; })) {
+      for (int i = p; i <= 1'000'000; i += p) {
+        if (phi[i] == 0) {
+          phi[i] = p;
+        }
+      }
+    }
+    long long ans = 0;
+    phi[1] = 1;
+    for (int d = 2; d <= 1'000'000; d++) {
+      if (phi[d] == 0 || phi[d] == d) {
+        phi[d] = d - 1;
+      } else {
+        int ans = phi[d] - 1;
+        int n = d / phi[d];
+        int f = phi[d];
+        while (n % phi[d] == 0) {
+          n /= phi[d];
+          ans *= phi[d];
+          f *= phi[d];
+        }
+        phi[d] = ans * phi[d / f];
+      }
+      ans += phi[d];
+    }
+    return std::to_string(ans);
+  }
+
+ private:
+  const std::vector<int>& primes;
+};
+
+class P073 : public Solution {
+ public:
+  std::string solve() override { return std::to_string(stern_brocot(1, 2, 2, 5, 1, 3)); }
+
+ private:
+  int stern_brocot(int lnum, int lden, int mnum, int mden, int rnum, int rden) {
+    if (mden > 12000) return 0;
+    int ans = 1;
+    ans += stern_brocot(lnum, lden, lnum + mnum, lden + mden, mnum, mden);
+    ans += stern_brocot(mnum, mden, rnum + mnum, rden + mden, rnum, rden);
+    return ans;
+  }
+};
+
+class P074 : public Solution {
+ public:
+  P074() : chain(4'000'000, 0) {}
+  std::string solve() override {
+    int ans = 0;
+    for (int i = 1; i < 1'000'000; i++) {
+      if (eval_chain(i, -1, 0).first == 60) {
+        ans++;
+      }
+    }
+    return std::to_string(ans);
+  }
+
+ private:
+  std::pair<int, int> eval_chain(int n, int offset, int loop) {
+    int next = factorial_digits(n);
+    if (next == n) {
+      chain[n] = 1;
+      return {1, loop};
+    }
+    if (chain[next] > 0) {
+      chain[n] = chain[next] + 1;
+      return {chain[next] + 1, loop};
+    }
+    if (chain[next] < 0) {
+      chain[n] = chain[next] - offset + 2;
+      return {chain[next] - offset + 2, next};
+    }
+    chain[n] = offset - 1;
+    auto [size, next_loop] = eval_chain(next, offset - 1, loop);
+    if (chain[next_loop] >= chain[n] && next_loop > 0) {
+      chain[n] = chain[next];
+      return {chain[next], n == next_loop ? 0 : next_loop};
+    } else {
+      chain[n] = size + 1;
+      return {size + 1, next_loop};
+    }
+  }
+  int factorial_digits(int n) {
+    int ans = 0;
+    while (n) {
+      ans += euler::factorials[n % 10];
+      n /= 10;
+    }
+    return ans;
+  }
+  std::vector<int> chain;
+};
+
+class P075 : public Solution {
+ public:
+  std::string solve() override {
+    std::vector<int> count(1'500'001, 0);
+    for (auto [a, b, c] : euler::pythagorean_triples(1'500'000)) {
+      int perimeter = a + b + c;
+      if (perimeter > 1'500'000) continue;
+      count[perimeter]++;
+    }
+    int ans = 0;
+    for (int i = 1; i <= 1'500'000; i++) {
+      if (count[i] == 1) {
+        ans++;
+      }
+    }
+    return std::to_string(ans);
+  }
+};
+
+class P076 : public Solution {
+ public:
+  std::string solve() override {
+    std::vector<long long> ways(101, 0);
+    ways[0] = 1;
+    for (int i = 1; i <= 100; i++) {
+      for (int j = i; j <= 100; j++) {
+        ways[j] += ways[j - i];
+      }
+    }
+    return std::to_string(ways[100] - 1);
+  }
+};
+
+class P077 : public Solution {
+ public:
+  P077(const std::vector<int>& primes) : primes(primes) {}
+  std::string solve() override {
+    for (int i : std::views::iota(2)) {
+      if (search(i, 0) > 5000) {
+        return std::to_string(i);
+      }
+    }
+    std::unreachable();
+  }
+
+ private:
+  const std::vector<int>& primes;
+  std::map<std::pair<int, int>, int> memo;
+  int search(int n, int cur) {
+    if (n == 0) {
+      return 1;
+    }
+    if (memo.contains({n, cur})) {
+      return memo[{n, cur}];
+    }
+    int ans = 0;
+    for (int i = cur; primes[i] <= n; i++) {
+      ans += search(n - primes[i], i);
+    }
+    return memo[{n, cur}] = ans;
+  }
+};
+
+class P078 : public Solution {
+ public:
+  std::string solve() override {
+    std::vector<long long> ways(60001, 0);
+    auto pentagonals = std::views::iota(0) |
+                       std::views::transform([this](int n) { return generalized_pentagonal(n); }) |
+                       std::views::take_while([](int p) { return p < 60000; }) |
+                       std::ranges::to<std::vector<int>>();
+    ways[0] = 1;
+    for (int i = 1; i <= 60000; i++) {
+      for (int j = 0; pentagonals[j] <= i; j++) {
+        int sign = (j % 4 < 2) ? 1 : -1;
+        ways[i] = (ways[i] + sign * ways[i - pentagonals[j]]) % 1'000'000;
+        sign *= -1;
+      }
+      if (ways[i] % 1'000'000 == 0) {
+        return std::to_string(i);
+      }
+    }
+    std::unreachable();
+  }
+
+ private:
+  int generalized_pentagonal(int n) {
+    int x = n / 2 + 1;
+    if (n % 2 == 1) {
+      x = -x;
+    }
+    return euler::pentagonal(x);
+  }
+};
+
+class P079 : public Solution {
+ public:
+  std::string solve() override {
+    auto [graph, digits] = build_graph();
+    std::vector<bool> done(10, true);
+    for (int d : digits) {
+      done[d] = false;
+    }
+    int goal = digits.size();
+    int total = 0;
+    std::string ans;
+    std::vector<int> incoming(10);
+    for (int total = 0; total < goal; total++) {
+      std::fill(incoming.begin(), incoming.end(), 0);
+      for (int d : digits) {
+        if (done[d]) continue;
+        for (int neighbor : graph[d]) {
+          if (!done[neighbor]) {
+            incoming[d]++;
+          }
+        }
+      }
+      int min_index = find_min_incoming(incoming, done);
+      ans += std::to_string(min_index);
+      done[min_index] = true;
+    }
+    return ans;
+  }
+
+ private:
+  using graph_t = std::unordered_map<int, std::unordered_set<int>>;
+  using digits_t = std::unordered_set<int>;
+  std::pair<graph_t, digits_t> build_graph() {
+    graph_t graph;
+    digits_t digits;
+    for (int source : euler::parse_numbers<int>(p079_input)) {
+      int a = source / 100;
+      int b = (source / 10) % 10;
+      int c = source % 10;
+      graph[c].insert(a);
+      graph[c].insert(b);
+      graph[b].insert(a);
+      digits.insert(a);
+      digits.insert(b);
+      digits.insert(c);
+    }
+    return make_pair(graph, digits);
+  }
+  int find_min_incoming(const auto& done, const auto& incoming) {
+    int min_incoming = 100, min_index = -1;
+    for (int i = 0; i < 10; i++) {
+      if (incoming[i] < min_incoming && !done[i]) {
+        min_incoming = incoming[i];
+        min_index = i;
+      }
+    }
+    return min_index;
+  }
+};
+
 int main() {
   const std::vector<int> primes =
-      euler::sieve_generator(2'000'000) | std::ranges::to<std::vector<int>>();
+      euler::prime_sieve_generator(2'000'000) | std::ranges::to<std::vector<int>>();
   const std::unordered_set<int> prime_set(primes.begin(), primes.end());
   const std::vector<int> divisor_sums =
       euler::sum_of_divisors_generator(28'123) | std::ranges::to<std::vector<int>>();
@@ -1606,6 +1934,17 @@ int main() {
       std::make_shared<P066>(),
       std::make_shared<P067>(),
       std::make_shared<P068>(),
+      std::make_shared<P069>(primes),
+      std::make_shared<P070>(primes),
+      std::make_shared<P071>(),
+      std::make_shared<P072>(primes),
+      std::make_shared<P073>(),
+      std::make_shared<P074>(),
+      std::make_shared<P075>(),
+      std::make_shared<P076>(),
+      std::make_shared<P077>(primes),
+      std::make_shared<P078>(),
+      std::make_shared<P079>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());

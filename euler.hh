@@ -8,6 +8,32 @@
 
 namespace euler {
 
+template <typename T>
+T isqrt(const T& n) {
+  if constexpr (std::is_same_v<T, int>) {
+    if (n < 0) return 0;
+    return static_cast<int>(std::sqrt(n));
+  } else if constexpr (std::is_same_v<T, long long>) {
+    if (n < 0) return 0;
+    return static_cast<long long>(std::sqrtl(static_cast<long double>(n)));
+  } else {
+    if (n < 0) return 0;
+    T x = n, y = (x + 1) / 2;
+    while (y < x) {
+      x = y;
+      y = (x + n / x) / 2;
+    }
+    return x;
+  }
+}
+
+template <>
+mpz_class isqrt<mpz_class>(const mpz_class& n) {
+  mpz_class r;
+  mpz_sqrt(r.get_mpz_t(), n.get_mpz_t());
+  return r;
+}
+
 std::generator<int> fibonacci_generator() {
   int a = 0, b = 1;
   while (true) {
@@ -68,7 +94,7 @@ bool is_palindrome(T n) {
 
 template <>
 bool is_palindrome<std::string>(std::string n) {
-  return n == std::string(n.crbegin(), n.crend());
+  return std::equal(n.begin(), n.begin() + n.size() / 2, n.rbegin());
 }
 
 bool is_square(long long n) {
@@ -91,7 +117,7 @@ T lcm(T a, T b) {
   return a / gcd(a, b) * b;
 }
 
-std::generator<int> sieve_generator(int limit) {
+std::generator<int> prime_sieve_generator(int limit) {
   std::vector<bool> primes(limit + 1, true);
   int sqrt_limit = static_cast<int>(sqrt(limit));
   int p = 2;
@@ -106,6 +132,31 @@ std::generator<int> sieve_generator(int limit) {
   for (; p <= limit; p++) {
     if (primes[p]) {
       co_yield p;  // Yield the prime number
+    }
+  }
+}
+
+std::generator<int> mobius_sieve_generator(int limit) {
+  std::vector<int> mobius(limit + 1, 1);
+  int sqrt_limit = isqrt(limit);
+  int p = 2;
+  for (; p <= sqrt_limit; p++) {
+    if (mobius[p] == 1) {  // p is prime
+      for (int i = p; i <= limit; i += p) {
+        mobius[i] *= -p;  // Mark multiples of p
+      }
+      for (int i = p * p; i <= limit; i += p * p) {
+        mobius[i] = 0;  // Mark multiples of p^2
+      }
+    }
+  }
+  for (int i = 0; i <= limit; i++) {
+    if (mobius[i] < 0) {
+      co_yield 1;  // Yield 1 for square-free numbers
+    } else if (mobius[i] > 0) {
+      co_yield -1;  // Yield -1 for square-free numbers with an odd number of prime factors
+    } else if (mobius[i] == 0) {
+      co_yield 0;  // Yield 0 for non-square-free numbers
     }
   }
 }
@@ -181,6 +232,7 @@ std::generator<int> triangular_generator() {
     co_yield triangular;
     i++;
   }
+  std::unreachable();
 }
 
 std::generator<std::pair<int, int>> group_factor_integer(int n) {
@@ -236,7 +288,7 @@ std::generator<long long> collatz_generator(long long n) {
       n = 3 * n + 1;
     }
   }
-  co_yield 1;  // Yield the last element
+  co_yield 1;
 }
 
 template <typename T>
@@ -250,12 +302,6 @@ T binomial(int n, int k) {
     result /= i + 1;
   }
   return result;
-}
-
-mpz_class isqrt(const mpz_class& n) {
-  mpz_class r;
-  mpz_sqrt(r.get_mpz_t(), n.get_mpz_t());
-  return r;
 }
 
 template <typename T>
@@ -294,9 +340,9 @@ T modpow(T base, T exp, T mod) {
 }
 
 template <typename T>
-T factorial(T n) {
+constexpr T factorial(T n) {
   T result = 1;
-  for (int i = 2; i <= n; i++) {
+  for (size_t i = 2; i <= static_cast<size_t>(n); i++) {
     result *= i;
   }
   return result;
@@ -350,7 +396,8 @@ std::generator<T> pandigital_generator(int n, int start) {
 
 template <typename T>
 bool is_triangular(T n) {
-  int x = static_cast<T>(sqrt(2 * n));
+  T n2 = 2 * n;
+  T x = isqrt(n2);
   return x * (x + 1) / 2 == n;
 }
 
@@ -386,6 +433,17 @@ consteval auto make_powers10() {
 }
 
 constexpr auto powers10 = make_powers10<10>();
+
+template <std::size_t N>
+consteval std::array<int, N> make_factorials() {
+  std::array<int, N> a = {};
+  for (size_t i = 0; i < N; ++i) {
+    a[i] = euler::factorial(i);
+  }
+  return a;
+}
+
+constexpr auto factorials = make_factorials<10>();
 
 constexpr std::pair<int, long long> findsd(long long n) {
   long long d = n - 1;
@@ -475,7 +533,7 @@ std::tuple<T, T, T> line_from_two_points(T x0, T y0, T x1, T y1) {
   return {a, b, c};
 }
 
-std::generator<std::pair<mpz_class, mpz_class>> convergents(std::generator<int> coefs) {
+std::generator<std::pair<mpz_class, mpz_class>> convergents(std::generator<long long> coefs) {
   mpz_class h0 = 0, k0 = 1;
   mpz_class h1 = 1, k1 = 0;
   for (int a : coefs) {
@@ -489,12 +547,12 @@ std::generator<std::pair<mpz_class, mpz_class>> convergents(std::generator<int> 
   }
 }
 
-std::generator<int> sqrt_coefs(int n) {
-  int a0 = static_cast<int>(std::floor(std::sqrt(n)));
+std::generator<long long> sqrt_coefs(long long n) {
+  long long a0 = sqrt(static_cast<long double>(n));
   if (a0 * a0 == n) {
     co_return;
   }
-  int m = 0, d = 1, a = a0, p = 0;
+  long long m = 0, d = 1, a = a0, p = 0;
   do {
     m = d * a - m;
     d = (n - m * m) / d;
@@ -502,6 +560,7 @@ std::generator<int> sqrt_coefs(int n) {
     a = (a0 + m) / d;
     p++;
   } while (true);
+  std::unreachable();
 }
 
 std::vector<std::vector<int>> parse_triangle(const std::string& source) {
@@ -519,13 +578,49 @@ std::vector<std::vector<int>> parse_triangle(const std::string& source) {
   }
   return triangle;
 }
-std::pair<mpz_class, mpz_class> pell(int D) {
+
+std::generator<std::pair<mpz_class, mpz_class>> pell(long long D) {
+  mpz_class mD{std::to_string(D)};
   for (auto [num, den] : euler::convergents(euler::sqrt_coefs(D))) {
-    if (num * num - D * den * den == 1) {
-      return {num, den};
+    if (num * num - den * den * mD == 1) {
+      co_yield {num, den};
     }
   }
   std::unreachable();
+}
+
+int euler_phi(int n) {
+  for (auto [p, exp] : euler::group_factor_integer(n)) {
+    n = n / p * (p - 1);
+  }
+  return n;
+}
+
+std::generator<std::pair<int, int>> walk_cantor_order() {
+  for (int i : std::views::iota(0)) {
+    for (int j : std::views::iota(0, i + 1)) {
+      if (i % 2 == 0) {
+        co_yield {j, i - j};  // Moving downwards
+      } else {
+        co_yield {i - j, j};  // Moving upwards
+      }
+    }
+  }
+}
+
+std::generator<std::tuple<int, int, int>> pythagorean_triples(int N) {
+  for (int m = 2; m * m <= N; ++m) {
+    for (int n = 1; n < m; ++n) {
+      if ((m - n) % 2 == 1 && std::gcd(m, n) == 1) {
+        int a = m * m - n * n;
+        int b = 2 * m * n;
+        int c = m * m + n * n;
+        for (int k = 1; k * c <= N; k++) {
+          co_yield {a * k, b * k, c * k};
+        }
+      }
+    }
+  }
 }
 
 }  // namespace euler
