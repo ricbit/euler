@@ -579,6 +579,35 @@ std::vector<std::vector<int>> parse_triangle(const std::string& source) {
   return triangle;
 }
 
+static inline std::string trim(const std::string& s) {
+  auto first =
+      std::find_if_not(s.begin(), s.end(), [](unsigned char c) { return std::isspace(c); });
+  auto last = std::find_if_not(s.rbegin(), s.rend(), [](unsigned char c) {
+                return std::isspace(c);
+              }).base();
+  return first < last ? std::string(first, last) : std::string();
+}
+
+std::vector<std::vector<long long>> parse_matrix(const std::string& input) {
+  std::vector<std::vector<long long>> mat;
+  std::istringstream in(input);
+  std::string line;
+  while (std::getline(in, line)) {
+    line = trim(line);
+    if (line.empty()) continue;  // skip blank lines
+
+    std::vector<long long> row;
+    std::istringstream lin(line);
+    std::string token;
+    while (std::getline(lin, token, ',')) {
+      token = trim(token);
+      row.push_back(std::stoll(token));
+    }
+    mat.push_back(std::move(row));
+  }
+  return mat;
+}
+
 std::generator<std::pair<mpz_class, mpz_class>> pell(long long D) {
   mpz_class mD{std::to_string(D)};
   for (auto [num, den] : euler::convergents(euler::sqrt_coefs(D))) {
@@ -608,14 +637,15 @@ std::generator<std::pair<int, int>> walk_cantor_order() {
   }
 }
 
-std::generator<std::tuple<int, int, int>> pythagorean_triples(int N) {
-  for (int m = 2; m * m <= N; ++m) {
-    for (int n = 1; n < m; ++n) {
-      if ((m - n) % 2 == 1 && std::gcd(m, n) == 1) {
-        int a = m * m - n * n;
-        int b = 2 * m * n;
-        int c = m * m + n * n;
-        for (int k = 1; k * c <= N; k++) {
+template <class T>
+std::generator<std::tuple<T, T, T>> pythagorean_triples(T N) {
+  for (T m = 2; m * m <= N; ++m) {
+    for (T n = 1; n < m; ++n) {
+      if ((m - n) % 2 == 1 && euler::gcd(m, n) == 1) {
+        T a = m * m - n * n;
+        T b = 2 * m * n;
+        T c = m * m + n * n;
+        for (T k = 1; k * c <= N; k++) {
           co_yield {a * k, b * k, c * k};
         }
       }

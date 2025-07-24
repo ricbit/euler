@@ -1779,7 +1779,6 @@ class P078 : public Solution {
       for (int j = 0; pentagonals[j] <= i; j++) {
         int sign = (j % 4 < 2) ? 1 : -1;
         ways[i] = (ways[i] + sign * ways[i - pentagonals[j]]) % 1'000'000;
-        sign *= -1;
       }
       if (ways[i] % 1'000'000 == 0) {
         return std::to_string(i);
@@ -1807,7 +1806,6 @@ class P079 : public Solution {
       done[d] = false;
     }
     int goal = digits.size();
-    int total = 0;
     std::string ans;
     std::vector<int> incoming(10);
     for (int total = 0; total < goal; total++) {
@@ -1855,6 +1853,82 @@ class P079 : public Solution {
       }
     }
     return min_index;
+  }
+};
+
+class P080 : public Solution {
+ public:
+  std::string solve() override {
+    int sum = 0;
+    for (int i = 1; i <= 100; i++) {
+      if (euler::is_square(i)) continue;
+      mpz_class n = i * euler::ipow<mpz_class>(10, 200);
+      mpz_class root = euler::isqrt(n);
+      std::string root_str = root.get_str();
+      for (int i = 0; i < 100; i++) {
+        sum += root_str[i] - '0';
+      }
+    }
+    return std::to_string(sum);
+  }
+};
+
+class P081 : public Solution {
+ public:
+  std::string solve() override {
+    auto mat = euler::parse_matrix(p081_input);
+    std::vector<std::vector<long long>> ans(80, std::vector<long long>(80, 0));
+    for (int x = 79; x >= 0; x--) {
+      for (int y = 79; y >= 0; y--) {
+        if (x == 79) {
+          if (y == 79) {
+            ans[x][y] = mat[x][y];
+          } else {
+            ans[x][y] = mat[x][y] + ans[x][y + 1];
+          }
+        } else {
+          if (y == 79) {
+            ans[x][y] = mat[x][y] + ans[x + 1][y];
+          } else {
+            ans[x][y] = std::min<long long>(mat[x][y] + ans[x + 1][y], mat[x][y] + ans[x][y + 1]);
+          }
+        }
+      }
+    }
+    return std::to_string(ans[0][0]);
+  }
+};
+
+class P082 : public Solution {
+ public:
+  std::string solve() override {
+    auto mat = euler::parse_matrix(p082_input);
+    std::vector<std::vector<long long>> ans(80, std::vector<long long>(80, 0));
+    for (int y = 0; y < 80; y++) {
+      ans[y][79] = mat[y][79];
+    }
+    for (int x = 78; x >= 0; x--) {
+      for (int yenter = 0; yenter < 80; yenter++) {
+        long long best = 1'000'000;
+        for (int yexit = 0; yexit < 80; yexit++) {
+          long long partial = ans[yexit][x + 1];
+          for (int k = std::min(yenter, yexit); k <= std::max(yenter, yexit); k++) {
+            partial += mat[k][x];
+          }
+          if (partial < best) {
+            best = partial;
+          }
+        }
+        ans[yenter][x] = best;
+      }
+    }
+    long long best = 1'000'000;
+    for (int y = 0; y < 80; y++) {
+      if (ans[y][0] < best) {
+        best = ans[y][0];
+      }
+    }
+    return std::to_string(best);
   }
 };
 
@@ -1945,10 +2019,13 @@ int main() {
       std::make_shared<P077>(primes),
       std::make_shared<P078>(),
       std::make_shared<P079>(),
+      std::make_shared<P080>(),
+      std::make_shared<P081>(),
+      std::make_shared<P082>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());
-  std::transform(std::execution::par, solutions.begin(), solutions.end(), results.begin(),
+  std::transform(/*std::execution::par,*/ solutions.begin(), solutions.end(), results.begin(),
                  [](const auto& solution) {
                    auto t0 = std::chrono::steady_clock::now();
                    std::string result = solution->solve();
