@@ -8,12 +8,15 @@
 #include <bitset>
 #include <chrono>
 #include <cmath>
+#include <complex>
+#include <eigen3/Eigen/Dense>
 #include <execution>
 #include <generator>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <numeric>
+#include <queue>
 #include <ranges>
 #include <set>
 #include <sstream>
@@ -1148,7 +1151,7 @@ class P055 : public Solution {
   }
 
  private:
-  bool is_lychrel(long long n) {
+  bool is_lychrel(unsigned long long n) {
     for (int i = 0; i < 50; i++) {
       n += euler::reverse_digits(n);
       if (euler::is_palindrome(n)) {
@@ -1932,6 +1935,402 @@ class P082 : public Solution {
   }
 };
 
+class P083 : public Solution {
+ public:
+  std::string solve() override {
+    auto mat = euler::parse_matrix(p083_input);
+    pos start{0, 0};
+    std::priority_queue<std::pair<long long, pos>> next;
+    std::set<pos> visited;
+    next.push({-mat[0][0], start});
+    while (!next.empty()) {
+      auto [score, cur] = next.top();
+      next.pop();
+      visited.insert(cur);
+      if (cur == pos{79, 79}) {
+        return std::to_string(-score);
+      }
+      for (int i = 0; i < 4; i++) {
+        pos cnext{cur.first + dir[i].first, cur.second + dir[i].second};
+        if (!visited.contains(cnext) && cnext.first >= 0 && cnext.first < 80 && cnext.second >= 0 &&
+            cnext.second < 80) {
+          next.push({score - mat[cnext.first][cnext.second], cnext});
+        }
+      }
+    }
+    std::unreachable();
+  }
+
+ private:
+  using pos = std::pair<int, int>;
+  const std::vector<pos> dir{pos{0, 1}, pos{0, -1}, pos{1, 0}, pos{-1, 0}};
+};
+
+class P084 : public Solution {
+ public:
+  std::string solve() override {
+    Eigen::Matrix<double, 40 * 3 + 1, 40 * 3 + 1> mat;
+    mat.setZero();
+    for (int pos = 0; pos < 40; pos++) {
+      for (int doubles = 0; doubles < 3; doubles++) {
+        for (auto [d1, d2] : moves()) {
+          int level = 0;
+          if (d1 == d2) {
+            level = (doubles + 1) * 40;
+            if (doubles == 2) {
+              mat(JAIL + 0, pos + doubles * 40) += basestep;
+              continue;
+            }
+          }
+          int dest = (pos + d1 + d2) % 40;
+          if (dest == G2J) {
+            dest = JAIL;
+          } else if (dest == CC1 || dest == CC2 || dest == CC3) {
+            for (int i = 0; i < 16; i++) {
+              int newdest = i == 0 ? GO : i == 1 ? JAIL : dest;
+              mat(newdest + level, pos + doubles * 40) += smallstep;
+            }
+            continue;
+          } else if (dest == CH1 || dest == CH2 || dest == CH3) {
+            for (int i = 0; i < 16; i++) {
+              int newdest = chance(dest, i);
+              mat(newdest + level, pos + doubles * 40) += smallstep;
+            }
+            continue;
+          }
+          mat(dest + level, pos + doubles * 40) += basestep;
+        }
+      }
+    }
+    for (int i = 0; i < 40 * 3; i++) {
+      mat(i, i) -= 1.0;
+      mat(40 * 3, i) = 1.0;
+    }
+    Eigen::Vector<double, 40 * 3 + 1> b;
+    b.setZero();
+    b(40 * 3) = 1.0;
+    auto x = mat.colPivHouseholderQr().solve(b);
+    std::vector<std::pair<double, int>> results;
+    for (int i = 0; i < 40; i++) {
+      double prob = x[i] + x[i + 40] + x[i + 80];
+      results.emplace_back(prob, i);
+    }
+    std::sort(results.rbegin(), results.rend());
+    return std::format("{:02d}{:02d}{:02d}", results[0].second, results[1].second,
+                       results[2].second);
+  }
+
+ private:
+  std::generator<std::pair<int, int>> moves() {
+    for (int i = 1; i <= sides; i++) {
+      for (int j = 1; j <= sides; j++) {
+        co_yield {i, j};
+      }
+    }
+  }
+  int chance(int dest, int i) {
+    switch (i) {
+      case 0:
+        return GO;
+      case 1:
+        return JAIL;
+      case 2:
+        return C1;
+      case 3:
+        return E3;
+      case 4:
+        return H2;
+      case 5:
+        return nextrail(dest);
+      case 6:
+        return nextrail(dest);
+      case 7:
+        return nextutil(dest);
+      case 8:
+        return (dest + 40 - 3) % 40;
+    }
+    return dest;
+  }
+  int nextrail(int dest) {
+    if (dest == CH1) return R2;
+    if (dest == CH2) return R3;
+    if (dest == CH3) return R1;
+    std::unreachable();
+  }
+  int nextutil(int dest) {
+    if (dest == CH1) return U1;
+    if (dest == CH2) return U2;
+    if (dest == CH3) return U1;
+    std::unreachable();
+  }
+  const int GO = 0, G2J = 30, JAIL = 10, CH1 = 7, CH2 = 22, CH3 = 36;
+  const int CC1 = 2, CC2 = 17, CC3 = 33;
+  const int R1 = 5, R2 = 15, R3 = 25;
+  const int U1 = 12, U2 = 28, C1 = 11, E3 = 24, H2 = 39;
+  const int sides = 4;
+  const double basestep = 1.0 / sides / sides;
+  const double smallstep = basestep / 16;
+};
+
+class P085 : public Solution {
+ public:
+  std::string solve() override {
+    constexpr long long M = 2'000'000;
+    const int limit = euler::isqrt(M);
+    comp best{M * M, 0};
+    for (int i = 1; i <= limit; i++) {
+      double bb = invert(i, M);
+      for (int b = std::floor(bb); b <= std::ceil(bb); b++) {
+        int r = rects(i, b);
+        comp cur{(r - M) * (r - M), i * b};
+        if (cur < best) {
+          best = cur;
+        }
+      }
+    }
+    return std::to_string(best.second);
+  }
+
+ private:
+  using comp = std::pair<long long, int>;
+  int rects(int a, int b) { return a * b * (1 + a + b + a * b) / 4; }
+  double invert(int a, int c) {
+    double sq = std::sqrt(static_cast<double>(a + a * a + 16 * c) / (a * (1 + a)));
+    return (sq - 1) / 2;
+  }
+};
+
+class P086 : public Solution {
+ public:
+  std::string solve() override { return ""; }
+};
+
+class P087 : public Solution {
+ public:
+  P087(const std::vector<int>& primes) : primes(primes) {}
+  std::string solve() override {
+    std::vector<int> visited;
+    visited.reserve(2'000'000);
+    for (int p4 : primes) {
+      int p4v = p4 * p4 * p4 * p4;
+      if (p4v >= 50'000'000) {
+        break;
+      }
+      for (int p3 : primes) {
+        int p3v = p3 * p3 * p3;
+        if (p4v + p3v >= 50'000'000) {
+          break;
+        }
+        for (int p2 : primes) {
+          int p2v = p2 * p2;
+          int sum = p4v + p3v + p2v;
+          if (sum >= 50'000'000) {
+            break;
+          }
+          visited.push_back(sum);
+        }
+      }
+    }
+    std::sort(visited.begin(), visited.end());
+    int cur = 0, sum = 0;
+    for (int v : visited) {
+      if (v != cur) {
+        sum++;
+        cur = v;
+      }
+    }
+    return std::to_string(sum);
+  }
+
+ private:
+  const std::vector<int>& primes;
+};
+
+class P090 : public Solution {
+ public:
+  std::string solve() override {
+    std::vector<int> six_digits;
+    const int mask = (1 << 6) + (1 << 9);
+    for (unsigned int i = 0; i < 1024; i++) {
+      if (std::popcount(i) == 6) {
+        int dice = i;
+        if (dice & mask) {
+          dice |= mask;
+        }
+        six_digits.push_back(dice);
+      }
+    }
+    int ans = 0;
+    for (int d1 : six_digits) {
+      for (int d2 : six_digits) {
+        if (valid(d1, d2)) {
+          ans++;
+        }
+      }
+    }
+    return std::to_string(ans / 2);
+  }
+
+ private:
+  bool valid(int d1, int d2) {
+    for (int i = 1; i < 10; i++) {
+      int square = i * i;
+      int a = (1 << (square / 10)), b = (1 << (square % 10));
+      if (!(((d1 & a) && (d2 & b)) || ((d1 & b) && (d2 & a)))) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+
+class P091 : public Solution {
+ public:
+  std::string solve() override {
+    std::set<Triangle> ans;
+    for (int x1 = 0; x1 <= 50; x1++) {
+      for (int x2 = x1; x2 <= 50; x2++) {
+        int starty = x1 == 0 ? 1 : 0;
+        for (int y1 = starty; y1 <= 50; y1++) {
+          for (int y2 = 0; y2 <= 50; y2++) {
+            int a = dist(0, 0, x1, y1);
+            int b = dist(0, 0, x2, y2);
+            int c = dist(x1, y1, x2, y2);
+            int h = std::max({a, b, c});
+            if (2 * h == a + b + c && std::min({a, b, c}) > 0) {
+              Triangle t = {{x1, y1}, {x2, y2}};
+              if (t.first > t.second) {
+                std::swap(t.first, t.second);
+              }
+              ans.insert(t);
+            }
+          }
+        }
+      }
+    }
+    return std::to_string(ans.size());
+  }
+
+ private:
+  using Triangle = std::pair<std::pair<int, int>, std::pair<int, int>>;
+  int dist(int x1, int y1, int x2, int y2) { return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2); }
+};
+
+class P092 : public Solution {
+ public:
+  std::string solve() override {
+    int ans = 0;
+    for (auto digits : split(7, 0, Histogram{})) {
+      int sum = 0;
+      for (int d = 0; d <= 9; d++) {
+        sum += digits[d] * d * d;
+      }
+      if (sum > 0 && chain(sum) == 89) {
+        ans += euler::multinomial<long long>(digits);
+      }
+    }
+    return std::to_string(ans);
+  }
+
+ private:
+  using Histogram = std::array<int, 10>;
+  int digit_square_sum(int n) {
+    int ans = 0;
+    while (n) {
+      int d = n % 10;
+      ans += d * d;
+      n /= 10;
+    }
+    return ans;
+  }
+  int chain(int n) {
+    while (true) {
+      if (n == 1 or n == 89) {
+        return n;
+      }
+      n = digit_square_sum(n);
+    }
+    std::unreachable();
+  }
+  std::generator<Histogram> split(int n, int start, Histogram current) {
+    if (n == 0) {
+      co_yield current;
+      co_return;
+    }
+    if (start == 9) {
+      current[9] += n;
+      co_yield current;
+      co_return;
+    }
+    for (int i = 0; i <= n; i++) {
+      Histogram next = current;
+      if (i > 0) {
+        next[start] += i;
+      }
+      for (auto h : split(n - i, start + 1, next)) {
+        co_yield h;
+      }
+    }
+    co_return;
+  }
+};
+
+class P093 : public Solution {
+ public:
+  std::string solve() override {
+    std::vector<int> digits(9);
+    std::iota(digits.begin(), digits.end(), 1);
+    auto range = euler::combinations(digits, 4) |
+                 std::views::transform([this](auto comb) { return make_pair(count(comb), comb); });
+    auto ans = std::ranges::max(range).second;
+    return std::to_string(ans[0] * 1000 + ans[1] * 100 + ans[2] * 10 + ans[3]);
+  }
+
+ private:
+  using op_t = std::function<double(double, double)>;
+  std::array<op_t, 6> ops = {[](double a, double b) { return a + b; },
+                             [](double a, double b) { return a - b; },
+                             [](double a, double b) { return b - a; },
+                             [](double a, double b) { return a * b; },
+                             [](double a, double b) { return near(b, 0) ? 0 : a / b; },
+                             [](double a, double b) { return near(a, 0) ? 0 : b / a; }};
+
+  static bool near(double a, double b) {
+    const double eps = 1e-4;
+    return abs(a - b) < eps;
+  }
+
+  int count(std::vector<int> int_digits) {
+    std::set<int> s;
+    for (auto op1 : ops) {
+      for (auto op2 : ops) {
+        for (auto op3 : ops) {
+          std::sort(int_digits.begin(), int_digits.end());
+          do {
+            std::array<double, 4> digits;
+            std::transform(int_digits.begin(), int_digits.end(), digits.begin(),
+                           [](int d) { return static_cast<double>(d); });
+            auto value1 = op3(op1(digits[0], digits[1]), op2(digits[2], digits[3]));
+            if (near(value1, std::round(value1))) {
+              s.insert(static_cast<int>(std::round(value1)));
+            }
+            auto value2 = op1(digits[0], op2(digits[1], op3(digits[2], digits[3])));
+            if (near(value2, std::round(value2))) {
+              s.insert(static_cast<int>(std::round(value2)));
+            }
+          } while (std::next_permutation(int_digits.begin(), int_digits.end()));
+        }
+      }
+    }
+    for (int i = 1; i <= 9'999; i++) {
+      if (!s.contains(i)) {
+        return i;
+      }
+    }
+    std::unreachable();
+  }
+};
+
 int main() {
   const std::vector<int> primes =
       euler::prime_sieve_generator(2'000'000) | std::ranges::to<std::vector<int>>();
@@ -2022,11 +2421,22 @@ int main() {
       std::make_shared<P080>(),
       std::make_shared<P081>(),
       std::make_shared<P082>(),
+      std::make_shared<P083>(),
+      std::make_shared<P084>(),
+      std::make_shared<P085>(),
+      std::make_shared<P086>(),
+      std::make_shared<P087>(primes),
+      std::make_shared<P086>(),
+      std::make_shared<P086>(),
+      std::make_shared<P090>(),
+      std::make_shared<P091>(),
+      std::make_shared<P092>(),
+      std::make_shared<P093>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());
-  std::transform(/*std::execution::par,*/ solutions.begin(), solutions.end(), results.begin(),
-                 [](const auto& solution) {
+  std::transform(std::execution::par, solutions.begin(), solutions.end(), results.begin(),
+                 [&](const auto& solution) {
                    auto t0 = std::chrono::steady_clock::now();
                    std::string result = solution->solve();
                    auto t1 = std::chrono::steady_clock::now();

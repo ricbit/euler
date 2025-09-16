@@ -317,10 +317,10 @@ constexpr T ipow(T base, T exp) {
   return res;
 }
 
-int sum_of_divisors(int n) {
-  int ans = 1;
+long long sum_of_divisors(long long n) {
+  long long ans = 1;
   for (auto [p, exp] : group_factor_integer(n)) {
-    ans *= (ipow(p, exp + 1) - 1) / (p - 1);
+    ans *= (ipow<long long>(p, exp + 1) - 1) / (p - 1);
   }
   return ans;
 }
@@ -650,6 +650,62 @@ std::generator<std::tuple<T, T, T>> pythagorean_triples(T N) {
         }
       }
     }
+  }
+}
+
+template <typename T>
+std::generator<std::tuple<T, T, T>> primitive_pythagorean_triples(T N) {
+  for (T m = 2; m * m <= N; ++m) {
+    for (T n = 1; n < m; ++n) {
+      if ((m - n) % 2 == 1 && euler::gcd(m, n) == 1) {
+        T a = m * m - n * n;
+        T b = 2 * m * n;
+        T c = m * m + n * n;
+        co_yield {a, b, c};
+      }
+    }
+  }
+}
+
+template <typename T, typename Q>
+T multinomial(const Q& counts) {
+  T n = 0;
+  for (T count : counts) {
+    n += count;
+  }
+  T result = factorial(n);
+  for (T count : counts) {
+    result /= factorial(count);
+  }
+  return result;
+}
+
+void print_sequence(auto& seq) {
+  for (auto e : seq) {
+    std::cout << e << " ";
+  }
+  std::cout << std::endl;
+}
+
+template <typename T>
+std::generator<std::vector<T>> combinations(std::vector<T> elements, int k) {
+  const int n = static_cast<int>(elements.size());
+  if (k < 0 || k > n) co_return;
+
+  std::vector<int> idx(k);
+  std::iota(idx.begin(), idx.end(), 0);
+
+  while (true) {
+    std::vector<T> comb;
+    comb.reserve(k);
+    for (int i : idx) comb.push_back(elements[i]);
+    co_yield comb;
+
+    int i = k - 1;
+    while (i >= 0 && idx[i] == n - k + i) --i;
+    if (i < 0) break;
+    ++idx[i];
+    for (int j = i + 1; j < k; ++j) idx[j] = idx[j - 1] + 1;
   }
 }
 
