@@ -97,8 +97,9 @@ bool is_palindrome<std::string>(std::string n) {
   return std::equal(n.begin(), n.begin() + n.size() / 2, n.rbegin());
 }
 
-bool is_square(long long n) {
-  long long root = static_cast<long long>(sqrt(n));
+template <typename T>
+bool is_square(T n) {
+  T root = isqrt<T>(n);
   return root * root == n;
 }
 
@@ -698,14 +699,22 @@ std::generator<std::vector<T>> combinations(std::vector<T> elements, int k) {
   while (true) {
     std::vector<T> comb;
     comb.reserve(k);
-    for (int i : idx) comb.push_back(elements[i]);
+    for (int i : idx) {
+      comb.push_back(elements[i]);
+    }
     co_yield comb;
 
     int i = k - 1;
-    while (i >= 0 && idx[i] == n - k + i) --i;
-    if (i < 0) break;
-    ++idx[i];
-    for (int j = i + 1; j < k; ++j) idx[j] = idx[j - 1] + 1;
+    while (i >= 0 && idx[i] == n - k + i) {
+      i--;
+    }
+    if (i < 0) {
+      break;
+    }
+    idx[i]++;
+    for (int j = i + 1; j < k; j++) {
+      idx[j] = idx[j - 1] + 1;
+    }
   }
 }
 

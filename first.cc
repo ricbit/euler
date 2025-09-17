@@ -2331,6 +2331,45 @@ class P093 : public Solution {
   }
 };
 
+class P094 : public Solution {
+ public:
+  std::string solve() override {
+    mpz_class ans = sum_over(-1) + sum_over(1);
+    return ans.get_str();
+  }
+
+ private:
+  mpz_class sum_over(int side) {
+    mpz_class ans = 0;
+    for (auto perimeter : iter_sides(side)) {
+      if (perimeter >= 1'000'000'000) {
+        return ans;
+      }
+      ans += perimeter;
+    }
+    std::unreachable();
+  }
+
+  std::generator<mpz_class> iter_sides(int offset) {
+    for (auto [x, y] : euler::pell(3)) {
+      mpz_class yy = 2 * y;
+      mpz_class a = (euler::isqrt<mpz_class>(yy * yy * 3 + 4) + offset) / 3;
+      if (a > 0 && heron(a, a, a + offset)) {
+        co_yield 3 * a + offset;
+      }
+    }
+    std::unreachable();
+  }
+
+  bool heron(mpz_class a, mpz_class b, mpz_class c) {
+    mpz_class area_sq = (a + b + c) * (a + b - c) * (a - b + c) * (-a + b + c) / 16;
+    if (area_sq <= 0) {
+      return false;
+    }
+    return euler::is_square(area_sq);
+  }
+};
+
 int main() {
   const std::vector<int> primes =
       euler::prime_sieve_generator(2'000'000) | std::ranges::to<std::vector<int>>();
@@ -2432,6 +2471,7 @@ int main() {
       std::make_shared<P091>(),
       std::make_shared<P092>(),
       std::make_shared<P093>(),
+      std::make_shared<P094>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());
