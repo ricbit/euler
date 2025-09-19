@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "euler.hh"
+#include "exactcover.hh"
 #include "first_input.hh"
 #include "poker.hh"
 #include "spelling.hh"
@@ -2370,12 +2371,115 @@ class P094 : public Solution {
   }
 };
 
+class P095 : public Solution {
+ public:
+  P095(const std::vector<int>& divisor_sums) : divisor_sums(divisor_sums) {}
+  std::string solve() override {
+    int M = 1'000'000;
+    int goal = M;
+    int max_size = 0;
+    std::vector<int> seen(M + 1, 0);
+    for (int i = 2; i <= M; i++) {
+      if (seen[i] > 0) {
+        continue;
+      }
+      int j = i;
+      seen[i] = i;
+      while ((j = divisor_sums[j] - j) != i) {
+        if (j < 2 || j > M || seen[j] > 0) {
+          break;
+        }
+        seen[j] = i;
+      }
+      if (j < 2 || j > M || seen[j] < i) {
+        continue;
+      }
+      int size = 0;
+      int start = j;
+      while ((j = divisor_sums[j] - j) != start) {
+        size++;
+      }
+      if (size > max_size) {
+        goal = j;
+        while ((j = divisor_sums[j] - j) != start) {
+          if (j < goal) {
+            goal = j;
+          }
+        }
+        max_size = size;
+      }
+    }
+    return std::to_string(goal);
+  }
+
+ private:
+  const std::vector<int>& divisor_sums;
+};
+
+class P096 : public Solution {
+ public:
+  std::string solve() override {
+    eval_solution solution;
+    std::istringstream iss(p096_input);
+    for (std::string grid, number; iss >> grid >> number;) {
+      // read the grid from stdin.
+      char given[9][9];
+      std::string line;
+      for (int j = 0; j < 9; j++) {
+        iss >> line;
+        for (int i = 0; i < 9; i++) {
+          given[j][i] = line[i] - '1';
+        }
+      }
+
+      // build the exact cover matrix.
+      std::vector<std::vector<bool>> mat(9 * 9 * 9, std::vector<bool>(9 * 9 * 4, false));
+      for (int digit = 0; digit < 9; digit++)
+        for (int row = 0; row < 9; row++)
+          for (int col = 0; col < 9; col++) {
+            if (given[row][col] >= 0 && given[row][col] != digit) continue;
+            int i = digit + col * 9 + row * 9 * 9;
+            mat[i][col + row * 9] = true;
+            mat[i][9 * 9 + row * 9 + digit] = true;
+            mat[i][9 * 9 * 2 + col * 9 + digit] = true;
+            int box = (row / 3) * 3 + col / 3;
+            mat[i][9 * 9 * 3 + box * 9 + digit] = true;
+          }
+
+      // print the solution.
+      euler_exactcover::exactcover(mat, solution);
+    }
+    return std::to_string(solution.total);
+  }
+
+ private:
+  // callback to sum the solutions found.
+  struct eval_solution {
+    int total = 0;
+    void operator()(const std::vector<int>& solution) {
+      char tab[9][9];
+      memset(tab, 0, sizeof tab);
+      for (auto it : solution) tab[it / 9 / 9][it / 9 % 9] = 1 + it % 9;
+      int code = tab[0][0] * 100 + tab[0][1] * 10 + tab[0][2];
+      total += code;
+    }
+  };
+};
+
+class P097 : public Solution {
+ public:
+  std::string solve() override {
+    const mpz_class M = euler::ipow<mpz_class>(10, 10);
+    mpz_class exp = euler::modpow<mpz_class>(2, 7830457, M);
+    mpz_class ans = (28433 * exp + 1) % M;
+    return ans.get_str();
+  }
+};
+
 int main() {
-  const std::vector<int> primes =
-      euler::prime_sieve_generator(2'000'000) | std::ranges::to<std::vector<int>>();
+  const auto [primes, first_prime] = euler::linear_sieve(2'000'000);
   const std::unordered_set<int> prime_set(primes.begin(), primes.end());
-  const std::vector<int> divisor_sums =
-      euler::sum_of_divisors_generator(28'123) | std::ranges::to<std::vector<int>>();
+  const auto divisor_sums = euler::all_divisors(1'000'000, first_prime);
 
   std::vector<std::shared_ptr<Solution>> solutions = {
       std::make_shared<P001>(),
@@ -2472,6 +2576,9 @@ int main() {
       std::make_shared<P092>(),
       std::make_shared<P093>(),
       std::make_shared<P094>(),
+      std::make_shared<P095>(divisor_sums),
+      std::make_shared<P096>(),
+      std::make_shared<P097>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());

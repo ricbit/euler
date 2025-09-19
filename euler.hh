@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <generator>
+#include <iterator>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -402,17 +403,19 @@ bool is_triangular(T n) {
   return x * (x + 1) / 2 == n;
 }
 
-long long square(long long n) { return n * n; }
+long long polygonal(long long s, long long n) { return n * ((s - 2) * n - (s - 4)) / 2; }
 
-long long triangular(long long n) { return n * (n + 1) / 2; }
+long long square(long long n) { return polygonal(4, n); }
 
-long long pentagonal(long long n) { return n * (3 * n - 1) / 2; }
+long long triangular(long long n) { return polygonal(3, n); }
 
-long long hexagonal(long long n) { return n * (2 * n - 1); }
+long long pentagonal(long long n) { return polygonal(5, n); }
 
-long long heptagonal(long long n) { return n * (5 * n - 3) / 2; }
+long long hexagonal(long long n) { return polygonal(6, n); }
 
-long long octagonal(long long n) { return n * (3 * n - 2); }
+long long heptagonal(long long n) { return polygonal(7, n); }
+
+long long octagonal(long long n) { return polygonal(8, n); }
 
 bool is_pentagonal(long long n) {
   long long d = 24 * n + 1;
@@ -716,6 +719,54 @@ std::generator<std::vector<T>> combinations(std::vector<T> elements, int k) {
       idx[j] = idx[j - 1] + 1;
     }
   }
+}
+
+std::pair<std::vector<int>, std::vector<int>> linear_sieve(int M) {
+  std::vector<int> first_prime(M + 1, 0);
+  std::vector<int> primes;
+
+  for (int i = 2; i <= M; i++) {
+    if (first_prime[i] == 0) {
+      first_prime[i] = i;
+      primes.push_back(i);
+    }
+    for (int j = 0; i * primes[j] <= M; j++) {
+      first_prime[i * primes[j]] = primes[j];
+      if (primes[j] == first_prime[i]) {
+        break;
+      }
+    }
+  }
+  return {primes, first_prime};
+}
+
+int sum_of_divisors(int n, const std::vector<int>& first_prime) {
+  int ans = 1, current_prime = 0, current_factor = 0, prime_power = 0;
+  while (n != 1) {
+    if (first_prime[n] != current_prime) {
+      if (current_prime != 0) {
+        ans *= current_factor;
+      }
+      current_prime = first_prime[n];
+      current_factor = 1 + current_prime;
+      prime_power = current_prime;
+    } else {
+      prime_power *= current_prime;
+      current_factor += prime_power;
+    }
+    n /= current_prime;
+  }
+  return ans * current_factor;
+}
+
+std::vector<int> all_divisors(int M, const std::vector<int>& first_prime) {
+  std::vector<int> divisor_sum(M + 1);
+  std::iota(divisor_sum.begin(), divisor_sum.end(), 0);
+  auto start = divisor_sum.begin();
+  std::advance(start, 2);
+  std::transform(std::execution::par, start, divisor_sum.end(), start,
+                 [&](int n) { return sum_of_divisors(n, first_prime); });
+  return divisor_sum;
 }
 
 }  // namespace euler
