@@ -1562,7 +1562,8 @@ class P070 : public Solution {
     int limit = sqrt(10'000'000);
     int psize = primes.size();
     for (int i = 0; primes[i] < limit; i++) {
-      for (int j = i + 1; j < psize && primes[i] * primes[j] < 10'000'000; j++) {
+      int inner_limit = 10'000'000 / primes[i];
+      for (int j = i + 1; j < psize && primes[j] < inner_limit; j++) {
         int n = primes[i] * primes[j];
         int tot = (primes[i] - 1) * (primes[j] - 1);
         double frac = static_cast<double>(n) / tot;
@@ -2476,6 +2477,133 @@ class P097 : public Solution {
   }
 };
 
+class P098 : public Solution {
+ public:
+  std::string solve() override {
+    std::unordered_map<std::string, std::vector<std::string>> anagrams;
+    for (const std::string& word : p098_input) {
+      anagrams[sorted(word)].push_back(word);
+    }
+    long long maxsize = 0;
+    for (const auto& [key, words] : anagrams) {
+      if (words.size() > 1 && maxsize < key.size()) {
+        maxsize = key.size();
+      }
+    }
+    std::vector<std::vector<long long>> squares(1);
+    long long limit = euler::ipow(10LL, maxsize + 1);
+    long long current = 10;
+    for (long long i = 1; i * i <= limit; i++) {
+      if (i * i >= current) {
+        squares.push_back({});
+        current *= 10;
+      }
+      squares.rbegin()->push_back(i * i);
+    }
+    long long best = 0;
+    for (const auto& [key, words] : anagrams) {
+      int size = key.size();
+      for (const auto& [word1, word2] : iter_words(words)) {
+        for (long long square : squares[size - 1]) {
+          long long sq2 = convert(word2, word1, square);
+          if (euler::is_square(sq2)) {
+            if (!std::ranges::contains(squares[size - 1], sq2)) {
+              continue;
+            }
+            long long local_best = std::max(square, sq2);
+            if (local_best > best) {
+              best = local_best;
+            }
+          }
+        }
+      }
+    }
+    return std::to_string(best);
+  }
+
+ private:
+  std::string sorted(std::string word) {
+    std::ranges::sort(word);
+    return word;
+  }
+  std::generator<std::pair<std::string, std::string>> iter_words(
+      const std::vector<std::string>& words) {
+    for (const auto& word1 : words) {
+      for (const auto& word2 : words) {
+        if (word1 == word2) {
+          continue;
+        }
+        co_yield {word1, word2};
+      }
+    }
+  }
+  std::array<int, 26> code;
+  std::array<char, 10> code_digits;
+  long long convert(const std::string& word, const std::string& base, long long square) {
+    std::fill(code_digits.begin(), code_digits.end(), 0);
+    std::fill(code.begin(), code.end(), 10);
+    for (char c : std::views::reverse(base)) {
+      int digit = square % 10;
+      if (code_digits[digit] > 0) {
+        return -1;
+      }
+      if (code[c - 'A'] != 10) {
+        return -1;
+      }
+      code_digits[digit] = c;
+      code[c - 'A'] = square % 10;
+      square /= 10;
+    }
+    long long new_square = 0;
+    for (char c : word) {
+      new_square = new_square * 10 + code[c - 'A'];
+    }
+    return new_square;
+  }
+};
+
+class P099 : public Solution {
+ public:
+  std::string solve() override {
+    std::istringstream infile(p099_input);
+    std::string line;
+    std::getline(infile, line);
+    int line_number = 1;
+    int best = 0, best_line = 0;
+    while (std::getline(infile, line)) {
+      std::istringstream iss(line);
+      double base, exp;
+      char dummy;
+      iss >> base >> dummy >> exp;
+      double value = exp * std::log(base);
+      if (value > best) {
+        best = value;
+        best_line = line_number;
+      }
+      line_number++;
+    }
+    return std::to_string(best_line);
+  }
+};
+
+class P100 : public Solution {
+ public:
+  std::string solve() override {
+    mpz_class x1 = 3, y1 = 1;
+    mpz_class x = x1, y = y1;
+    mpz_class b = 0;
+    mpz_class limit = euler::ipow(mpz_class{10}, mpz_class{12});
+    while (y + b < limit) {
+      mpz_class xk = x1 * x + y1 * y * 8;
+      mpz_class yk = x1 * y + y1 * x;
+      x = xk;
+      y = yk;
+      b = (1 + 2 * y + euler::isqrt<mpz_class>(y * y * 8 + 1)) / 2;
+    }
+    return b.get_str();
+  }
+};
+
 int main() {
   const auto [primes, first_prime] = euler::linear_sieve(2'000'000);
   const std::unordered_set<int> prime_set(primes.begin(), primes.end());
@@ -2579,6 +2707,9 @@ int main() {
       std::make_shared<P095>(divisor_sums),
       std::make_shared<P096>(),
       std::make_shared<P097>(),
+      std::make_shared<P098>(),
+      std::make_shared<P099>(),
+      std::make_shared<P100>(),
   };
 
   std::vector<std::pair<std::string, long long>> results(solutions.size());
