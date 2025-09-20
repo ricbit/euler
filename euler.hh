@@ -344,7 +344,7 @@ T modpow(T base, T exp, T mod) {
 template <typename T>
 constexpr T factorial(T n) {
   T result = 1;
-  for (size_t i = 2; i <= static_cast<size_t>(n); i++) {
+  for (size_t i = 2; i <= n; i++) {
     result *= i;
   }
   return result;
@@ -767,6 +767,20 @@ std::vector<int> all_divisors(int M, const std::vector<int>& first_prime) {
   std::transform(std::execution::par, start, divisor_sum.end(), start,
                  [&](int n) { return sum_of_divisors(n, first_prime); });
   return divisor_sum;
+}
+
+int max_triangle_sum(const std::vector<std::vector<int>>& grid) {
+  std::vector<std::vector<int>> ans(grid.size(), std::vector<int>(grid.size(), 0));
+  int n = grid.size();
+  for (int i = 0; i < n; i++) {
+    ans[n - 1][i] = grid[n - 1][i];
+  }
+  for (int j = n - 2; j >= 0; j--) {
+    for (int i = 0; i <= j; i++) {
+      ans[j][i] = grid[j][i] + std::max(ans[j + 1][i], ans[j + 1][i + 1]);
+    }
+  }
+  return ans[0][0];
 }
 
 }  // namespace euler

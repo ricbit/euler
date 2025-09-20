@@ -138,12 +138,9 @@ class P008 : public Solution {
 class P009 : public Solution {
  public:
   std::string solve() override {
-    for (int a = 1; a < 1000; a++) {
-      for (int b = a + 1; b < 1000 - a; b++) {
-        int c = 1000 - a - b;
-        if (a * a + b * b == c * c) {
-          return std::to_string(a * b * c);
-        }
+    for (auto [a, b, c] : euler::pythagorean_triples(1000)) {
+      if (a + b + c == 1000) {
+        return std::to_string(a * b * c);
       }
     }
     std::unreachable();
@@ -291,17 +288,7 @@ class P018 : public Solution {
  public:
   std::string solve() override {
     auto grid = euler::parse_triangle(p018_input);
-    std::vector<std::vector<int>> ans(grid.size(), std::vector<int>(grid.size(), 0));
-    int n = grid.size();
-    for (int i = 0; i < n; i++) {
-      ans[n - 1][i] = grid[n - 1][i];
-    }
-    for (int j = n - 2; j >= 0; j--) {
-      for (int i = 0; i <= j; i++) {
-        ans[j][i] = grid[j][i] + std::max(ans[j + 1][i], ans[j + 1][i + 1]);
-      }
-    }
-    return std::to_string(ans[0][0]);
+    return std::to_string(euler::max_triangle_sum(grid));
   }
 };
 
@@ -325,10 +312,7 @@ class P019 : public Solution {
 class P020 : public Solution {
  public:
   std::string solve() override {
-    mpz_class factorial = 1;
-    for (int i = 1; i <= 100; i++) {
-      factorial *= i;
-    }
+    mpz_class factorial = euler::factorial(mpz_class{100});
     auto digits = euler::digit_generator(factorial.get_str()) | std::ranges::to<std::vector<int>>();
     int sum = std::accumulate(digits.begin(), digits.end(), 0);
     return std::to_string(sum);
@@ -1467,17 +1451,7 @@ class P067 : public Solution {
  public:
   std::string solve() override {
     auto grid = euler::parse_triangle(p067_input);
-    std::vector<std::vector<int>> ans(grid.size(), std::vector<int>(grid.size(), 0));
-    int n = grid.size();
-    for (int i = 0; i < n; i++) {
-      ans[n - 1][i] = grid[n - 1][i];
-    }
-    for (int j = n - 2; j >= 0; j--) {
-      for (int i = 0; i <= j; i++) {
-        ans[j][i] = grid[j][i] + std::max(ans[j + 1][i], ans[j + 1][i + 1]);
-      }
-    }
-    return std::to_string(ans[0][0]);
+    return std::to_string(euler::max_triangle_sum(grid));
   }
 };
 
@@ -2148,6 +2122,54 @@ class P087 : public Solution {
   const std::vector<int>& primes;
 };
 
+class P088 : public Solution {
+ public:
+  std::string solve() override { return ""; }
+};
+
+class P089 : public Solution {
+ public:
+  std::string solve() override {
+    std::istringstream iss(p089_input);
+    std::string roman;
+    int ans = 0;
+    while (iss >> roman) {
+      std::string original = roman;
+      for (const auto& [before, after] : replace_list) {
+        auto pos = roman.find(before);
+        if (pos != std::string::npos) {
+          roman.replace(roman.find(before), 2, after);
+        }
+      }
+      int number = 0;
+      for (char c : roman) {
+        number += decoder[c];
+      }
+      int new_size = 0;
+      int pos = 1;
+      while (number > 0) {
+        if (pos++ == 4) {
+          new_size += number % 10;
+        } else {
+          new_size += minimal[number % 10];
+        }
+        number /= 10;
+      }
+      ans += original.size() - new_size;
+    }
+    return std::to_string(ans);
+  }
+
+ private:
+  std::unordered_map<char, int> decoder{{'I', 1},   {'V', 5},   {'X', 10},  {'L', 50},
+                                        {'C', 100}, {'D', 500}, {'M', 1000}};
+  std::vector<int> minimal{0, 1, 2, 3, 2, 1, 2, 3, 4, 2};
+  std::vector<std::pair<std::string, std::string>> replace_list = {
+      {"IV", "IIII"},  {"IX", "VIIII"}, {"XL", "XXXX"},
+      {"XC", "LXXXX"}, {"CD", "CCCC"},  {"CM", "DCCCC"},
+  };
+};
+
 class P090 : public Solution {
  public:
   std::string solve() override {
@@ -2697,8 +2719,8 @@ int main() {
       std::make_shared<P085>(),
       std::make_shared<P086>(),
       std::make_shared<P087>(primes),
-      std::make_shared<P086>(),
-      std::make_shared<P086>(),
+      std::make_shared<P088>(),
+      std::make_shared<P089>(),
       std::make_shared<P090>(),
       std::make_shared<P091>(),
       std::make_shared<P092>(),
