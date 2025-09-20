@@ -762,6 +762,8 @@ int sum_of_divisors(int n, const std::vector<int>& first_prime) {
 std::vector<int> all_divisors(int M, const std::vector<int>& first_prime) {
   std::vector<int> divisor_sum(M + 1);
   std::iota(divisor_sum.begin(), divisor_sum.end(), 0);
+  divisor_sum[0] = 0;
+  divisor_sum[1] = 1;
   auto start = divisor_sum.begin();
   std::advance(start, 2);
   std::transform(std::execution::par, start, divisor_sum.end(), start,

@@ -360,12 +360,12 @@ class P023 : public Solution {
     const int limit = 28123;
     std::vector<int> abundants;
     for (int i = 1; i <= limit; i++) {
-      if (divisor_sums[i] - i > i) {
+      if (divisor_sums[i] > 2 * i) {
         abundants.push_back(i);
       }
     }
 
-    std::vector<bool> non_abundant_sum(2 * limit + 1, true);
+    std::vector<bool> non_abundant_sum(limit + 1, true);
     for (size_t i = 0; i < abundants.size(); i++) {
       for (size_t j = i; j < abundants.size(); j++) {
         if (abundants[i] + abundants[j] > limit) {
