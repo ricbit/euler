@@ -1,5 +1,5 @@
 // Compile with:
-// g++-14 -std=c++23 -march=native -O3 -Wall first.cc -o first -ltbb -lgmpxx -lgmp
+// g++-14 -std=c++23 -march=native -O3 -Wall fast.cc -o fast -ltbb -lgmpxx -lgmp
 
 #include <gmpxx.h>
 
@@ -29,7 +29,7 @@
 
 #include "euler.hh"
 #include "exactcover.hh"
-#include "first_input.hh"
+#include "fast_input.hh"
 #include "poker.hh"
 #include "spelling.hh"
 
@@ -792,6 +792,7 @@ class P041 : public Solution {
     long long best = 0;
     for (int n = 2; n < 10; n++) {
       for (long long value : euler::pandigital_generator<long long>(n, 1)) {
+        // Surprisingly fast
         if (euler::prime_test(value)) {
           best = std::max(best, value);
         }
@@ -913,10 +914,11 @@ class P046 : public Solution {
 
 class P047 : public Solution {
  public:
+  P047(const std::vector<int>& first_prime) : first_prime(first_prime) {}
   std::string solve() override {
     int consecutive = 0;
     for (int n = 1; n < 1000000; n++) {
-      int len = std::ranges::distance(euler::group_factor_integer(n));
+      int len = std::ranges::distance(euler::group_factor_integer(n, first_prime));
       if (len == 4) {
         consecutive++;
         if (consecutive == 4) {
@@ -928,6 +930,9 @@ class P047 : public Solution {
     }
     std::unreachable();
   }
+
+ private:
+  const std::vector<int>& first_prime;
 };
 
 class P048 : public Solution {
@@ -2678,7 +2683,7 @@ int main() {
       std::make_shared<P044>(),
       std::make_shared<P045>(),
       std::make_shared<P046>(prime_set),
-      std::make_shared<P047>(),
+      std::make_shared<P047>(first_prime),
       std::make_shared<P048>(),
       std::make_shared<P049>(primes, prime_set),
       std::make_shared<P050>(primes, prime_set),

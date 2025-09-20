@@ -62,18 +62,10 @@ std::generator<T> factor_integer(T n) {
 }
 
 template <typename T>
-std::generator<T> factor_integer(T n, const std::vector<int>& primes) {
-  size_t index = 0;
-  T limit = static_cast<T>(sqrt(n));
-  while (index < primes.size() && primes[index] <= limit) {
-    while (n % primes[index] == 0) {
-      co_yield primes[index];
-      n /= primes[index];
-    }
-    index++;
-  }
-  if (n > 1) {
-    co_yield n;
+std::generator<T> factor_integer(T n, const std::vector<int>& first_prime) {
+  while (n > 1) {
+    co_yield first_prime[n];
+    n /= first_prime[n];
   }
 }
 
@@ -117,25 +109,6 @@ T gcd(T a, T b) {
 template <typename T>
 T lcm(T a, T b) {
   return a / gcd(a, b) * b;
-}
-
-std::generator<int> prime_sieve_generator(int limit) {
-  std::vector<bool> primes(limit + 1, true);
-  int sqrt_limit = static_cast<int>(sqrt(limit));
-  int p = 2;
-  for (; p <= sqrt_limit; p++) {
-    if (primes[p]) {
-      co_yield p;  // Yield the prime number
-      for (int i = p * p; i <= limit; i += p) {
-        primes[i] = false;
-      }
-    }
-  }
-  for (; p <= limit; p++) {
-    if (primes[p]) {
-      co_yield p;  // Yield the prime number
-    }
-  }
 }
 
 std::generator<int> mobius_sieve_generator(int limit) {
@@ -255,9 +228,10 @@ std::generator<std::pair<int, int>> group_factor_integer(int n) {
   co_yield {last, count};
 }
 
-std::generator<std::pair<int, int>> group_factor_integer(int n, const std::vector<int>& primes) {
+std::generator<std::pair<int, int>> group_factor_integer(int n,
+                                                         const std::vector<int>& first_prime) {
   int count = 0, last = 0;
-  for (auto p : factor_integer(n, primes)) {
+  for (auto p : factor_integer(n, first_prime)) {
     if (p != last) {
       if (last == 0) {
         count = 1;
@@ -319,14 +293,6 @@ constexpr T ipow(T base, T exp) {
   return res;
 }
 
-long long sum_of_divisors(long long n) {
-  long long ans = 1;
-  for (auto [p, exp] : group_factor_integer(n)) {
-    ans *= (ipow<long long>(p, exp + 1) - 1) / (p - 1);
-  }
-  return ans;
-}
-
 template <typename T>
 T modpow(T base, T exp, T mod) {
   T res = 1;
@@ -362,13 +328,6 @@ std::string to_binary_string(int n) {
   }
   std::reverse(binary.begin(), binary.end());
   return binary;
-}
-
-std::generator<int> sum_of_divisors_generator(int limit) {
-  co_yield 0;
-  for (int i = 1; i <= limit; i++) {
-    co_yield sum_of_divisors(i);
-  }
 }
 
 template <typename T>
@@ -500,10 +459,6 @@ bool is_prime_mr(long long n) {
       return std::vector<long long>{2, 3, 5, 7, 11, 13, 17};
     else if (n < 3825123056546413051LL)
       return std::vector<long long>{2, 3, 5, 7, 11, 13, 17, 19, 23};
-    /*else if (n < 318665857834031151167461LL)
-        return std::vector<long long>{2,3,5,7,11,13,17,19,23,29,31,37};
-    else if (n < 3317044064679887385961981LL)
-        return std::vector<long long>{2,3,5,7,11,13,17,19,23,29,31,37,41};*/
     else
       throw std::domain_error("n too large for deterministic Miller-Rabin");
   }();
@@ -622,41 +577,6 @@ std::generator<std::pair<mpz_class, mpz_class>> pell(long long D) {
   std::unreachable();
 }
 
-int euler_phi(int n) {
-  for (auto [p, exp] : euler::group_factor_integer(n)) {
-    n = n / p * (p - 1);
-  }
-  return n;
-}
-
-std::generator<std::pair<int, int>> walk_cantor_order() {
-  for (int i : std::views::iota(0)) {
-    for (int j : std::views::iota(0, i + 1)) {
-      if (i % 2 == 0) {
-        co_yield {j, i - j};  // Moving downwards
-      } else {
-        co_yield {i - j, j};  // Moving upwards
-      }
-    }
-  }
-}
-
-template <class T>
-std::generator<std::tuple<T, T, T>> pythagorean_triples(T N) {
-  for (T m = 2; m * m <= N; ++m) {
-    for (T n = 1; n < m; ++n) {
-      if ((m - n) % 2 == 1 && euler::gcd(m, n) == 1) {
-        T a = m * m - n * n;
-        T b = 2 * m * n;
-        T c = m * m + n * n;
-        for (T k = 1; k * c <= N; k++) {
-          co_yield {a * k, b * k, c * k};
-        }
-      }
-    }
-  }
-}
-
 template <typename T>
 std::generator<std::tuple<T, T, T>> primitive_pythagorean_triples(T N) {
   for (T m = 2; m * m <= N; ++m) {
@@ -667,6 +587,15 @@ std::generator<std::tuple<T, T, T>> primitive_pythagorean_triples(T N) {
         T c = m * m + n * n;
         co_yield {a, b, c};
       }
+    }
+  }
+}
+
+template <class T>
+std::generator<std::tuple<T, T, T>> pythagorean_triples(T N) {
+  for (auto [a, b, c] : primitive_pythagorean_triples(N)) {
+    for (T k = 1; k * c <= N; k++) {
+      co_yield {a * k, b * k, c * k};
     }
   }
 }
