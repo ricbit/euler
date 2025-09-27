@@ -2129,7 +2129,41 @@ class P087 : public Solution {
 
 class P088 : public Solution {
  public:
-  std::string solve() override { return ""; }
+  P088(const std::vector<int>& first_prime) : first_prime(first_prime), minps(12001, 100000) {}
+
+  std::string solve() override {
+    search(1, 0, 1, 2);
+    std::set<int> ans;
+    for (int i = 2; i <= maxk; i++) {
+      if (minps[i] != 100000) {
+        ans.insert(minps[i]);
+      }
+    }
+    return std::to_string(std::ranges::fold_left(ans, 0, std::plus<int>()));
+  }
+
+ private:
+  const std::vector<int>& first_prime;
+  std::vector<int> minps;
+  const int limit = 24000, maxk = 12000;
+  void search(int lastprod, int lastsum, int k, int current) {
+    for (int i = current; i <= limit; i++) {
+      int cprod = lastprod * i;
+      int csum = lastsum + i;
+      if (cprod > limit || csum > limit) {
+        break;
+      }
+      if (cprod >= csum) {
+        int diff = cprod - csum;
+        if (k + diff <= maxk) {
+          minps[k + diff] = std::min(minps[k + diff], cprod);
+        }
+      }
+      if (k < maxk) {
+        search(cprod, csum, k + 1, i);
+      }
+    }
+  }
 };
 
 class P089 : public Solution {
@@ -2450,7 +2484,6 @@ class P096 : public Solution {
     eval_solution solution;
     std::istringstream iss(p096_input);
     for (std::string grid, number; iss >> grid >> number;) {
-      // read the grid from stdin.
       char given[9][9];
       std::string line;
       for (int j = 0; j < 9; j++) {
@@ -2474,7 +2507,6 @@ class P096 : public Solution {
             mat[i][9 * 9 * 3 + box * 9 + digit] = true;
           }
 
-      // print the solution.
       euler_exactcover::exactcover(mat, solution);
     }
     return std::to_string(solution.total);
@@ -2487,7 +2519,9 @@ class P096 : public Solution {
     void operator()(const std::vector<int>& solution) {
       char tab[9][9];
       memset(tab, 0, sizeof tab);
-      for (auto it : solution) tab[it / 9 / 9][it / 9 % 9] = 1 + it % 9;
+      for (auto it : solution) {
+        tab[it / 9 / 9][it / 9 % 9] = 1 + it % 9;
+      }
       int code = tab[0][0] * 100 + tab[0][1] * 10 + tab[0][2];
       total += code;
     }
@@ -2596,20 +2630,17 @@ class P099 : public Solution {
     std::string line;
     std::getline(infile, line);
     int line_number = 1;
-    int best = 0, best_line = 0;
+    std::pair<double, int> best = {0, 0};
     while (std::getline(infile, line)) {
       std::istringstream iss(line);
       double base, exp;
       char dummy;
       iss >> base >> dummy >> exp;
-      double value = exp * std::log(base);
-      if (value > best) {
-        best = value;
-        best_line = line_number;
-      }
+      std::pair<double, int> value = {exp * std::log(base), line_number};
+      best = std::max(best, value);
       line_number++;
     }
-    return std::to_string(best_line);
+    return std::to_string(best.second);
   }
 };
 
@@ -2724,7 +2755,7 @@ int main() {
       std::make_shared<P085>(),
       std::make_shared<P086>(),
       std::make_shared<P087>(primes),
-      std::make_shared<P088>(),
+      std::make_shared<P088>(first_prime),
       std::make_shared<P089>(),
       std::make_shared<P090>(),
       std::make_shared<P091>(),
