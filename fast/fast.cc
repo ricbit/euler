@@ -262,9 +262,7 @@ class P016 : public Solution {
  public:
   std::string solve() override {
     mpz_class power = mpz_class{1} << 1000;
-    auto digits = euler::digit_generator(power.get_str()) | std::ranges::to<std::vector<int>>();
-    int sum = std::accumulate(digits.begin(), digits.end(), 0);
-    return std::to_string(sum);
+    return std::to_string(euler::digit_sum(power));
   }
 };
 
