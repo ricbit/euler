@@ -2083,7 +2083,24 @@ class P085 : public Solution {
 
 class P086 : public Solution {
  public:
-  std::string solve() override { return ""; }
+  std::string solve() override {
+    int solutions = 0;
+    for (long long m = 1;; m++) {
+      for (long long i = 2; i <= 2 * m; i++) {
+        if (euler::is_square<long long>(m * m + i * i)) {
+          if (i > m + 1) {
+            solutions += m + 1 - (i + 1) / 2;
+          } else {
+            solutions += i / 2;
+          }
+        }
+        if (solutions >= 1'000'000) {
+          return std::to_string(m);
+        }
+      }
+    }
+    std::unreachable();
+  }
 };
 
 class P087 : public Solution {
